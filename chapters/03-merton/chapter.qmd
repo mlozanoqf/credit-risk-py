@@ -1,0 +1,616 @@
+---
+title: "The Merton model: Python companion"
+jupyter: python3
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    code-tools: true
+    code-copy: true
+    embed-resources: true
+execute:
+  echo: true
+  cache: false
+  error: false
+---
+
+Run this chapter from the project root in source order. The result identifiers
+correspond to the R companion and the book. This Python implementation uses the
+same inputs and financial equations. SciPy's optimizer uses analytical derivatives
+and explicit convergence checks; small numerical differences from R are expected.
+NumPy uses a different random stream, so simulated paths and counts differ even
+when the seed has the same number. The simulation checks use sampling uncertainty.
+
+The reference comparison found 11 grid entries outside the initial tight
+tolerance. Their largest PD difference is 0.341 basis points. Re-running the R
+settings reproduced those entries; an independent least-squares solver confirmed
+the Python values with smaller equation residuals. These are numerical stopping
+differences, with unchanged baseline results at the displayed precision and
+unchanged rankings of the three capital-structure choices.
+
+```{python}
+from dataclasses import replace
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path.cwd()))
+sys.path.insert(0, str(Path('chapters/03-merton/helpers').resolve()))
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
+from scipy.special import ndtr
+from scipy.stats import norm
+from model import Inputs, calibrate, d_values, residuals, objective, paths, terminal_assets
+from figures import plot_paths, sensitivity, capital_plot
+from shared.output import setup, show_table, show_figure, finish, BLUE, RED, GREEN
+
+out = setup('03-merton')
+values = {}
+
+def measure_table(labels, entries):
+    return pd.DataFrame({'Quantity': labels, 'Value': entries})
+```
+
+## 3.1 Estimating asset value and risk-neutral PD
+
+The observed equity value is 3, its annual volatility is 80%, the continuously
+compounded risk-free rate is 5%, and debt promises 10 in one year. Calibrate
+asset value and volatility by minimizing the sum of the two squared residuals.
+The implementation is in `helpers/model.py`; it uses L-BFGS-B, as does the R
+reference. Every fit is checked against the original two equations.
+
+```{python}
+inputs = Inputs(equity=3, equity_vol=0.8, rate=0.05, maturity=1, debt=10)
+fit = calibrate(inputs)
+V0, sv, pd0 = fit['V0'], fit['sv'], fit['pd']
+d1, d2 = fit['d1'], fit['d2']
+Nd1, Nd2 = ndtr(d1), ndtr(d2)
+E0, se, rf, TT, D = 3.0, 0.8, 0.05, 1.0, 10.0
+start_V0 = E0 + D * np.exp(-rf * TT)
+start_sv = se * E0 / start_V0
+values.update(V0=V0, sv=sv, pd_merton=pd0, pd1=pd0, d1=d1, d2=d2,
+              Nd1=Nd1, Nd2=Nd2, start_V0=start_V0, start_sv=start_sv,
+              optimizer_max_residual=fit['max_residual'])
+fit
+```
+
+### Table 3.1 {#result-table-3-1}
+
+```{python}
+show_table(out, '3.1', measure_table(
+    ['Estimated asset value', 'Estimated asset volatility', 'Merton risk-neutral PD'],
+    [f'{V0:.4f}', f'{sv:.4%}', f'{pd0:.4%}']))
+```
+
+### Table 3.2 {#result-table-3-2}
+
+```{python}
+show_table(out, '3.2', measure_table(
+    [r'$d_1$', r'$N(d_1)$', r'$d_2$', r'$N(d_2)$', r'$N(-d_2)$'],
+    [f'{x:.7f}' for x in [d1, Nd1, d2, Nd2, pd0]]))
+threshold = (np.log(D / V0) - (rf - sv**2 / 2) * TT) / (sv * np.sqrt(TT))
+assert np.isclose(threshold, -d2)
+values['merton_default_threshold'] = threshold
+```
+
+### Figure 3.1 {#result-figure-3-1}
+
+```{python}
+z = np.linspace(-4, 4, 801)
+fig, ax = plt.subplots(layout='constrained')
+ax.fill_between(z, norm.pdf(z), where=z < threshold, color=RED, interpolate=True)
+ax.fill_between(z, norm.pdf(z), where=z >= threshold, color=GREEN, interpolate=True)
+ax.plot(z, norm.pdf(z), color='black', lw=1)
+ax.axvline(threshold, ls=':', color='black')
+ax.text(0.02, 0.96, f'$N(d_2)$ = {Nd2:.7f} (green)\n$N(-d_2)$ = {pd0:.7f} (red)',
+        transform=ax.transAxes, va='top', fontsize=9)
+ax.set(xlim=(-4, 4), ylim=(0, 0.46), xlabel=r'Standard normal score ($-d_2$ is dotted)', ylabel='Density')
+show_figure(out, '3.1', fig)
+```
+
+### Checking the numerical solution
+
+### Table 3.3 {#result-table-3-3}
+
+```{python}
+objective_at_solution = objective(V0, sv, inputs)
+show_table(out, '3.3', measure_table(
+    ['Objective function value', 'Rounded objective function value'],
+    [f'{objective_at_solution:.10f}', f'{objective_at_solution:.6f}']))
+values['merton_objective_at_solution'] = objective_at_solution
+asset_grid = np.linspace(4, 20, 100)
+vol_grid = np.linspace(0.001, 0.6, 100)
+asset_slice = objective(asset_grid, sv, inputs)
+vol_slice = objective(V0, vol_grid, inputs)
+values['FG.V0'], values['FG.sv'] = asset_slice, vol_slice
+```
+
+### Figure 3.2 {#result-figure-3-2}
+
+```{python}
+fig, ax = plt.subplots(layout='constrained')
+ax.plot(asset_grid, asset_slice, color='black')
+ax.axvline(V0, color='0.3', ls='--', lw=0.7)
+ax.axhline(objective_at_solution, color='0.3', ls='--', lw=0.7)
+ax.scatter([V0], [objective_at_solution], edgecolor=RED, facecolor='white', zorder=4)
+ax.set(xlabel=r'$V_0$', ylabel=r'$F^2+G^2$')
+show_figure(out, '3.2', fig)
+```
+
+### Figure 3.3 {#result-figure-3-3}
+
+```{python}
+fig, ax = plt.subplots(layout='constrained')
+ax.plot(vol_grid, vol_slice, color='black')
+ax.axvline(sv, color='0.3', ls='--', lw=0.7)
+ax.axhline(objective_at_solution, color='0.3', ls='--', lw=0.7)
+ax.scatter([sv], [objective_at_solution], edgecolor=RED, facecolor='white', zorder=4)
+ax.set(xlabel=r'$\sigma_V$', ylabel=r'$F^2+G^2$')
+show_figure(out, '3.3', fig)
+```
+
+### Figure 3.4 {#result-figure-3-4}
+
+```{python}
+asset_mesh, vol_mesh = np.meshgrid(asset_grid, vol_grid)
+surface = objective(asset_mesh, vol_mesh, inputs)
+fig, ax = plt.subplots(layout='constrained')
+levels = [0.001, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 50, 100]
+contours = ax.contour(asset_mesh, vol_mesh, surface, levels=levels, cmap='plasma', linewidths=1.3)
+ax.clabel(contours, levels=[1, 5, 10, 50, 100], fontsize=10)
+ax.axvline(V0, ls='--', color='0.4', lw=0.7)
+ax.axhline(sv, ls='--', color='0.4', lw=0.7)
+ax.scatter([V0], [sv], facecolor='white', edgecolor=RED, zorder=5)
+ax.set(xlabel=r'$V_0$', ylabel=r'$\sigma_V$')
+show_figure(out, '3.4', fig)
+```
+
+### Figure 3.5 {#result-figure-3-5}
+
+```{python}
+fig = plt.figure(figsize=(7, 5), layout='constrained')
+ax = fig.add_subplot(projection='3d')
+ax.plot_surface(vol_mesh, asset_mesh, surface, color=BLUE, alpha=0.9)
+ax.set(xlabel='Asset volatility', ylabel='Asset value', zlabel=r'$F^2+G^2$')
+ax.view_init(elev=25, azim=40)
+show_figure(out, '3.5', fig)
+```
+
+### Table 3.4 {#result-table-3-4}
+
+```{python}
+show_table(out, '3.4', pd.DataFrame({
+    'Diagnostic': ['Objective at solution', 'Asset-value slice', 'Volatility slice', 'Contour', 'Surface'],
+    'What is checked': ['Both equation errors approach zero', 'Hold asset volatility fixed',
+                       'Hold asset value fixed', 'Move both estimates together', 'View the objective in three dimensions'],
+    'Reading': [f'Objective = {objective_at_solution:.3e}', 'Minimum near the fitted asset value',
+                'Minimum near the fitted asset volatility', 'Fitted pair in the low-error region',
+                'Same objective as the contour view']}))
+```
+
+### Model-implied debt value and spread
+
+```{python}
+market_value_debt = V0 - E0
+pv_debt = D * np.exp(-rf * TT)
+credit_gap = pv_debt - market_value_debt
+loss_rate = credit_gap / pv_debt
+lgd = loss_rate / pd0
+recovery = 1 - lgd
+reconstructed = pv_debt * (1 - pd0 * lgd)
+debt_yield = np.log(D / market_value_debt) / TT
+spread = debt_yield - rf
+values.update(market_value_debt=market_value_debt, pv_promised_payment_debt=pv_debt,
+              credit_value_gap=credit_gap, implied_loss_rate=loss_rate, implied_lgd=lgd,
+              implied_recovery_rate=recovery, reconstructed_debt_value=reconstructed,
+              merton_implied_debt_yield=debt_yield, merton_implied_spread=spread)
+```
+
+### Table 3.5 {#result-table-3-5}
+
+```{python}
+show_table(out, '3.5', measure_table(
+    ['Model-implied market value of debt', 'Risk-free PV of promised payment',
+     'Credit-risk value gap', 'Credit-risk value discount', 'Risk-neutral PD',
+     'Constant-equivalent implied LGD', 'Constant-equivalent recovery', 'Reconstructed debt value'],
+    [f'{market_value_debt:.4f}', f'{pv_debt:.4f}', f'{credit_gap:.4f}', f'{loss_rate:.4%}',
+     f'{pd0:.4%}', f'{lgd:.4%}', f'{recovery:.4%}', f'{reconstructed:.4f}']))
+```
+
+### Table 3.6 {#result-table-3-6}
+
+```{python}
+show_table(out, '3.6', measure_table(
+    ['Model-implied debt value', 'Promised debt payment', 'Risk-free rate', 'Implied debt yield',
+     'Merton-implied spread', 'Merton-implied spread (bps)'],
+    [f'{market_value_debt:.4f}', f'{D:.4f}', f'{rf:.4%}', f'{debt_yield:.4%}',
+     f'{spread:.4%}', f'{10000*spread:.1f}']))
+```
+
+## 3.2 Risk-neutral asset paths and default at maturity
+
+The simulation applies the exact lognormal transition over each daily interval.
+It starts at the calibrated asset value and uses the risk-free drift. Default is
+checked at maturity. Crossing below debt earlier is a separate path statistic.
+The seed fixes this Python run; it does not reproduce R's random-number stream.
+
+```{python}
+paths10 = paths(inputs, fit, 10, seed=3)
+paths100 = paths(inputs, fit, 100, seed=3)
+assert np.array_equal(paths10, paths100[:, :10])
+default10 = paths10[-1] < D
+crossed10 = np.any(paths10 < D, axis=0)
+default100 = paths100[-1] < D
+crossed100 = np.any(paths100 < D, axis=0)
+recovered100 = crossed100 & ~default100
+```
+
+### Figure 3.6 {#result-figure-3-6}
+
+```{python}
+fig, ax = plot_paths(paths10, D)
+ax.scatter(np.full(10, 365), paths10[-1], facecolors='none',
+           edgecolors=np.where(default10, RED, GREEN))
+show_figure(out, '3.6', fig)
+```
+
+### Figure 3.7 {#result-figure-3-7}
+
+```{python}
+fig, ax = plot_paths(paths10[:, crossed10], D, np.where(default10[crossed10], RED, BLUE), width=1.3)
+show_figure(out, '3.7', fig)
+```
+
+### Table 3.7 {#result-table-3-7}
+
+```{python}
+show_table(out, '3.7', measure_table(
+    ['Simulated default paths', 'Total simulated paths', 'Simulated risk-neutral PD', 'Analytical Merton PD'],
+    [str(default10.sum()), '10', f'{default10.mean():.0%}', f'{pd0:.4%}']))
+print(f'Probability of observing no defaults in ten independent paths: {(1-pd0)**10:.2%}')
+```
+
+This Python sample has no defaults among the first ten paths. Some paths cross
+below debt and subsequently recover. With only ten draws, a zero observed
+default rate is compatible with a positive analytical PD; the probability above
+quantifies that outcome. The following larger samples improve precision.
+
+### Figure 3.8 {#result-figure-3-8}
+
+```{python}
+fig, ax = plot_paths(paths100, D, alpha=0.4, width=0.55)
+show_figure(out, '3.8', fig)
+```
+
+### Table 3.8 {#result-table-3-8}
+
+```{python}
+show_table(out, '3.8', measure_table(
+    ['Simulated default paths', 'Total simulated paths', 'Simulated risk-neutral PD', 'Analytical Merton PD'],
+    [str(default100.sum()), '100', f'{default100.mean():.0%}', f'{pd0:.4%}']))
+```
+
+### Figure 3.9 {#result-figure-3-9}
+
+```{python}
+fig, ax = plot_paths(paths100[:, default100], D)
+show_figure(out, '3.9', fig)
+```
+
+### Figure 3.10 {#result-figure-3-10}
+
+```{python}
+fig, ax = plot_paths(paths100[:, recovered100], D,
+                     plt.cm.tab20(np.linspace(0, 1, recovered100.sum())))
+show_figure(out, '3.10', fig)
+```
+
+### Table 3.9 {#result-table-3-9}
+
+```{python}
+grid_rows = []
+for intervals in [1, 4, 12, 365]:
+    rows = np.unique(np.rint(np.linspace(0, 365, intervals+1)).astype(int))
+    grid_rows.append([intervals, np.any(paths100[rows] < D, axis=0).sum(), default100.sum()])
+grid_check = pd.DataFrame(grid_rows, columns=['Observation intervals', 'Paths observed below debt', 'Defaults at maturity'])
+show_table(out, '3.9', grid_check)
+values['gbm_grid_check_python'] = grid_check.to_numpy()
+values['gbm_example_value'] = V0 * np.exp((rf-sv**2/2)/365 - sv/np.sqrt(365))
+```
+
+### Checking Monte Carlo convergence
+
+Increasing sample size reduces sampling uncertainty, although a particular
+sequence of estimates need not move monotonically toward the analytical PD.
+
+### Figure 3.11 {#result-figure-3-11}
+
+```{python}
+rng = np.random.Generator(np.random.PCG64(13))
+sizes = [100, 1000, 10000]
+samples = [terminal_assets(inputs, fit, n, rng) for n in sizes]
+bins = np.arange(0, 60.25, 0.25)
+fig, axes = plt.subplots(3, 1, figsize=(7, 8), sharex=True, sharey=True, layout='constrained')
+for ax, n, sample in zip(axes, sizes, samples):
+    counts, edges = np.histogram(sample, bins=bins)
+    ax.bar(edges[:-1], counts, width=0.25, align='edge', color=np.where(edges[:-1] < D, RED, BLUE))
+    ax.axvline(D, ls='--', color='black', lw=0.8)
+    ax.text(0.60, 0.90, f'N = {n:,}\nSimulated: {(sample<D).mean():.1%}\nMerton: {pd0:.1%}',
+            transform=ax.transAxes, va='top', fontsize=9)
+    ax.set(xlim=(4, 30), ylim=(0, 400), ylabel='Frequency')
+axes[-1].set_xlabel('Asset value at maturity')
+show_figure(out, '3.11', fig)
+```
+
+### Figure 3.12 {#result-figure-3-12}
+
+```{python}
+VT = terminal_assets(inputs, fit, 100000, np.random.Generator(np.random.PCG64(13)))
+sim_pd = np.mean(VT < D)
+mc_se = np.sqrt(pd0 * (1-pd0) / len(VT))
+fig, ax = plt.subplots(layout='constrained')
+counts, edges = np.histogram(VT, bins=bins)
+ax.bar(edges[:-1], counts, width=0.25, align='edge', color=np.where(edges[:-1] < D, RED, BLUE))
+ax.axvline(D, color='black', ls='--', lw=0.8)
+ax.text(0.60, 0.92, f'Simulated PD: {sim_pd:.4%}\nMerton PD: {pd0:.4%}\nMC standard error: {mc_se:.4%}',
+        transform=ax.transAxes, va='top', fontsize=9)
+ax.set(xlim=(4, 30), xlabel='Asset value at maturity', ylabel='Frequency')
+show_figure(out, '3.12', fig)
+values.update(sim_pd_10=float(default10.mean()), sim_pd_100=float(default100.mean()),
+              sim_pd_100k=float(sim_pd), monte_carlo_se=float(mc_se),
+              mean_terminal_assets=float(VT.mean()),
+              recovered_paths_100=int(recovered100.sum()))
+```
+
+### Table 3.10 {#result-table-3-10}
+
+```{python}
+show_table(out, '3.10', measure_table(
+    ['Simulated terminal asset values', 'Terminal values below D', 'Simulated risk-neutral PD', 'Analytical Merton PD'],
+    [str(len(VT)), str((VT < D).sum()), f'{sim_pd:.4%}', f'{pd0:.4%}']))
+```
+
+## 3.3 Equity as a call option payoff
+
+### Table 3.11 {#result-table-3-11}
+
+```{python}
+show_table(out, '3.11', pd.DataFrame({
+    'European call option': [r'Underlying price $S_T$', r'Strike $K$', r'In the money if $S_T>K$',
+                             r'Worthless if $S_T<K$', r'Payoff $\max(S_T-K,0)$'],
+    'Merton market-value claim': [r'Asset value $V_T$', r'Promised debt $D$', r'Positive equity if $V_T>D$',
+                                 r'Default if $V_T<D$', r'Equity payoff $\max(V_T-D,0)$']}))
+```
+
+### Figure 3.13 {#result-figure-3-13}
+
+```{python}
+sorted_VT = np.sort(VT)
+ET = np.maximum(VT - D, 0)
+fig, ax = plt.subplots(layout='constrained')
+ax.axhline(0, color='0.8', lw=0.7)
+ax.plot(sorted_VT, np.maximum(sorted_VT-D, 0), color=BLUE, lw=1.8)
+ax.axvline(D, color='black', ls='--', lw=0.7)
+ax.text(0.04, 0.72, f'Equity payoff is zero\nin {sim_pd:.3%} of\n100,000 simulations.', transform=ax.transAxes)
+ax.set(xlim=(5, 20), ylim=(-0.55, 10), xlabel=r'Simulated assets at maturity ($V_T$)', ylabel=r'Equity payoff ($E_T$)')
+show_figure(out, '3.13', fig)
+values['discounted_equity_mc'] = float(np.exp(-rf*TT) * ET.mean())
+values['discounted_equity_mc_se'] = float(np.exp(-rf*TT) * ET.std(ddof=1) / np.sqrt(len(ET)))
+```
+
+## 3.4 Model-implied PD sensitivity analyses
+
+Each point recalibrates both asset value and asset volatility from the changed
+equity or debt input. Holding the previously inferred assets fixed would answer
+a different question. The same calibration residual checks apply to every point.
+
+### Table 3.12 {#result-table-3-12}
+
+```{python}
+show_table(out, '3.12', measure_table(
+    ['Observed equity value', 'Observed equity volatility', 'Risk-free rate', 'Debt maturity', 'Promised debt', 'Merton PD'],
+    [f'{E0:g}', f'{se:.0%}', f'{rf:.0%}', f'{TT:g}', f'{D:g}', f'{pd0:.4%}']))
+grids = {'equity': np.linspace(1,20,50), 'rate': np.linspace(0,0.2,50),
+         'debt': np.linspace(1,20,50), 'maturity': np.linspace(0.5,20,50),
+         'equity_vol': np.linspace(0.01,3,50)}
+curves = {key: np.array([calibrate(replace(inputs, **{key: float(x)}))['pd'] for x in grid])
+          for key, grid in grids.items()}
+for key, r_name in [('equity','pd.E'), ('rate','pd.rf'), ('debt','pd.D'), ('maturity','pd.T'), ('equity_vol','pd.se')]:
+    values[r_name] = curves[key]
+```
+
+### Figure 3.14 {#result-figure-3-14}
+
+```{python}
+show_figure(out, '3.14', sensitivity(grids['equity'], curves['equity'], E0, pd0, 'Equity at time zero', (0,0.15)))
+```
+
+### Figure 3.15 {#result-figure-3-15}
+
+```{python}
+show_figure(out, '3.15', sensitivity(grids['rate'], curves['rate'], rf, pd0, 'Risk-free rate',
+            (curves['rate'].min()-0.0006, curves['rate'].max()+0.0006), percent_x=True, decimals=1))
+```
+
+### Figure 3.16 {#result-figure-3-16}
+
+```{python}
+show_figure(out, '3.16', sensitivity(grids['debt'], curves['debt'], D, pd0, 'Promised debt at maturity', (0,0.15)))
+```
+
+### Figure 3.17 {#result-figure-3-17}
+
+```{python}
+show_figure(out, '3.17', sensitivity(grids['maturity'], curves['maturity'], TT, pd0, 'Maturity (years)'))
+```
+
+### Figure 3.18 {#result-figure-3-18}
+
+```{python}
+show_figure(out, '3.18', sensitivity(grids['equity_vol'], curves['equity_vol'], se, pd0, 'Equity volatility', percent_x=True))
+```
+
+### Table 3.13 {#result-table-3-13}
+
+```{python}
+readings = ['Larger observed equity cushion', 'Small effect with recalibration in this example',
+            'Higher promised debt boundary', 'Longer horizon with asset recalibration',
+            'Greater observed equity risk']
+show_table(out, '3.13', pd.DataFrame([
+    [key, f'{grid.min():g} to {grid.max():g}', f'{curves[key].min():.2%} to {curves[key].max():.2%}', reading]
+    for (key, grid), reading in zip(grids.items(), readings)],
+    columns=['Input', 'Grid range (rates as decimals)', 'PD range', 'Financial reading']))
+```
+
+### Figure 3.19 {#result-figure-3-19}
+
+```{python}
+equities = np.linspace(1,10,50)
+equity_vols = np.linspace(0.01,1.5,50)
+pd_surface = np.array([[calibrate(replace(inputs, equity=float(e), equity_vol=float(s)))['pd']
+                        for e in equities] for s in equity_vols])
+values['pd_surface_50'] = pd_surface
+fig, ax = plt.subplots(layout='constrained')
+cs = ax.contour(equities, equity_vols, pd_surface, levels=np.arange(0.05,1,0.05), cmap='plasma', linewidths=1.4)
+label_levels, label_positions = [], []
+for index in [0,1,2,3,7]:
+    segments = cs.allsegs[index]
+    visible = [segment[(segment[:,0]>2) & (segment[:,0]<9) &
+                       (segment[:,1]>0.45) & (segment[:,1]<1.15)] for segment in segments]
+    candidates = [segment for segment in visible if len(segment)]
+    if candidates:
+        segment = max(candidates, key=len)
+        label_levels.append(cs.levels[index])
+        label_positions.append(segment[np.argmin(abs(segment[:,0]-5))])
+ax.clabel(cs, levels=label_levels, manual=label_positions, fmt=lambda x:f'{x:.0%}', fontsize=10)
+ax.axvline(E0, color='0.3', ls='--', lw=0.7)
+ax.axhline(se, color='0.3', ls='--', lw=0.7)
+ax.scatter([E0], [se], facecolor='white', edgecolor=RED, zorder=5)
+ax.set(xlim=(1,10), ylim=(0.4,1.2), xlabel=r'$E_0$', ylabel=r'$\sigma_E$')
+ax.yaxis.set_major_formatter(PercentFormatter(1))
+show_figure(out, '3.19', fig)
+```
+
+### Figure 3.20 {#result-figure-3-20}
+
+```{python}
+equities_3d, vols_3d = np.linspace(2,4,40), np.linspace(0.2,1.5,40)
+surface_3d = np.array([[calibrate(replace(inputs, equity=float(e), equity_vol=float(s)))['pd']
+                       for e in equities_3d] for s in vols_3d])
+values['pd_surface_40'] = surface_3d
+emesh, smesh = np.meshgrid(equities_3d, vols_3d)
+fig = plt.figure(figsize=(7,5), layout='constrained')
+ax = fig.add_subplot(projection='3d')
+ax.plot_surface(smesh, emesh, surface_3d, color=BLUE)
+ax.set(xlabel='Equity volatility', ylabel='Equity value', zlabel='Risk-neutral PD')
+ax.zaxis.set_major_formatter(PercentFormatter(1))
+ax.view_init(elev=25, azim=40)
+show_figure(out, '3.20', fig)
+```
+
+## 3.5 Capital-structure scenarios
+
+The scenarios compare model-implied PD after recalibrating each candidate
+position. Their ranking is conditional on the retained market inputs; these
+calculations do not model how a transaction changes observed equity volatility.
+
+```{python}
+def scenario_pd(equity, debt, maturity=1):
+    return calibrate(replace(inputs, equity=float(equity), debt=float(debt), maturity=float(maturity)))['pd']
+
+scenario2 = scenario_pd(2,2)
+scenario3 = scenario_pd(3,6,1.5)
+s1a, s1b = scenario_pd(3,8), scenario_pd(5,10)
+s2a, s2b = scenario_pd(2,1), scenario_pd(3,2)
+s3a, s3b = scenario_pd(3,8,1.5), scenario_pd(3,6,2)
+values.update(pd_scenario_2_initial=scenario2, pd_scenario_3_initial=scenario3,
+              scenario1_reduce_D=s1a, scenario1_raise_E=s1b,
+              scenario2_reduce_D=s2a, scenario2_raise_E=s2b,
+              scenario3_more_debt=s3a, scenario3_more_time=s3b)
+debts = np.arange(1,131)/10
+equity_curves = [np.array([scenario_pd(e,d) for d in debts]) for e in range(1,6)]
+maturity_curves = [np.array([scenario_pd(3,d,t) for d in debts]) for t in [0.5,1,1.5,2,2.5]]
+for i, curve in enumerate(equity_curves, 1):
+    values[f'E{i}'] = curve
+for i, curve in enumerate(maturity_curves, 1):
+    values[f'T{i}'] = curve
+```
+
+### Table 3.14 {#result-table-3-14}
+
+```{python}
+show_table(out, '3.14', pd.DataFrame({
+    'Scenario': ['1. Hull position', '2. Lower equity/debt', '3. Liquidity and maturity'],
+    'Initial position': ['$E_0=3$, $D=10$, $T=1$', '$E_0=2$, $D=2$, $T=1$', '$E_0=3$, $D=6$, $T=1.5$'],
+    'Initial PD': [f'{p:.2%}' for p in [pd0,scenario2,scenario3]],
+    'Action A': ['Reduce D to 8', 'Reduce D to 1', 'Raise D to 8'],
+    'PD after A': [f'{p:.2%}' for p in [s1a,s2a,s3a]],
+    'Action B': ['Raise equity to 5', 'Raise equity to 3', 'Extend maturity to 2'],
+    'PD after B': [f'{p:.2%}' for p in [s1b,s2b,s3b]],
+    'Lower-PD alternative': ['B' if b<a else 'A' for a,b in [(s1a,s1b),(s2a,s2b),(s3a,s3b)]]}))
+equity_labels = [f'$E_0={e}$' for e in range(1,6)]
+```
+
+### Figure 3.21 {#result-figure-3-21}
+
+```{python}
+show_figure(out, '3.21', capital_plot(debts, equity_curves, equity_labels, [(10,pd0,'black')], pd0,10))
+```
+
+### Figure 3.22 {#result-figure-3-22}
+
+```{python}
+show_figure(out, '3.22', capital_plot(debts, equity_curves, equity_labels,
+            [(10,pd0,'black'), (10,s1b,RED), (8,s1a,'yellow')], pd0,10))
+```
+
+### Figure 3.23 {#result-figure-3-23}
+
+```{python}
+show_figure(out, '3.23', capital_plot(debts, equity_curves, equity_labels,
+            [(2,scenario2,'#7A5195')], scenario2,2, (0,2.5), (0,0.08)))
+```
+
+### Figure 3.24 {#result-figure-3-24}
+
+```{python}
+show_figure(out, '3.24', capital_plot(debts, equity_curves, equity_labels,
+            [(2,scenario2,'#7A5195'), (1,s2a,'yellow'), (2,s2b,'black')], scenario2,2, (0,2.5), (0,0.08)))
+```
+
+### Figure 3.25 {#result-figure-3-25}
+
+```{python}
+maturity_labels = [f'T={t:g}' for t in [2.5,2,1.5,1,0.5]]
+show_figure(out, '3.25', capital_plot(debts, maturity_curves[::-1], maturity_labels,
+            [(6,scenario3,'black')], scenario3,6))
+```
+
+### Figure 3.26 {#result-figure-3-26}
+
+```{python}
+show_figure(out, '3.26', capital_plot(debts, maturity_curves[::-1], maturity_labels,
+            [(6,scenario3,'black'), (8,s3a,'yellow'), (6,s3b,'#7A5195')], scenario3,6))
+```
+
+## Numerical checks and session
+
+The two calibration equations, the debt/equity decomposition and the analytical
+PD provide deterministic checks. Monte Carlo differences are compared with five
+standard errors, an intentionally conservative diagnostic rather than a promise
+of exact sample equality. The external test suite also compares the grids with R.
+
+```{python}
+assert np.max(np.abs(residuals(V0,sv,inputs))) < 2e-6
+assert np.isclose(Nd1, ndtr(d1)) and np.isclose(Nd2+pd0, 1)
+assert np.isclose(reconstructed, market_value_debt)
+assert np.isclose(E0 + market_value_debt, V0)
+assert np.isclose(D*np.exp(-debt_yield*TT), market_value_debt)
+assert abs(sim_pd-pd0) < 5*mc_se
+assert abs(values['discounted_equity_mc']-E0) < 5*values['discounted_equity_mc_se']
+assert np.array_equal(grid_check['Defaults at maturity'], np.repeat(default100.sum(),4))
+assert s1b < s1a and s2a < s2b and s3a < s3b
+finish(out, values)
+```

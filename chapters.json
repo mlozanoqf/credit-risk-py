@@ -1,0 +1,44 @@
+[
+  {
+    "id": "00-foundations",
+    "source": "chapters/00-foundations/chapter.qmd",
+    "title": "Foundations for Applied Credit Risk",
+    "status": "implemented"
+  },
+  {
+    "id": "01-logistic",
+    "source": "chapters/01-logistic/chapter.qmd",
+    "title": "Logistic credit scoring",
+    "status": "implemented"
+  },
+  {
+    "id": "02-tree-based",
+    "source": "chapters/02-tree-based/chapter.qmd",
+    "title": "Tree-based credit scoring",
+    "status": "implemented"
+  },
+  {
+    "id": "03-merton",
+    "source": "chapters/03-merton/chapter.qmd",
+    "title": "The Merton model",
+    "status": "implemented"
+  },
+  {
+    "id": "04-credit-spreads-cds",
+    "source": "chapters/04-credit-spreads-cds/chapter.qmd",
+    "title": "Credit Spreads and CDS Valuation",
+    "status": "implemented"
+  },
+  {
+    "id": "05-copulas",
+    "source": "chapters/05-copulas/chapter.qmd",
+    "title": "Portfolio Credit Risk with Copulas",
+    "status": "implemented"
+  },
+  {
+    "id": "06-climate-credit-risk",
+    "source": "chapters/06-climate-credit-risk/chapter.qmd",
+    "title": "Climate Credit Risk",
+    "status": "implemented"
+  }
+]

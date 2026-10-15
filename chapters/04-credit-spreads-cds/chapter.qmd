@@ -1,0 +1,559 @@
+---
+title: "Credit Spreads and CDS Valuation: Python companion"
+jupyter: python3
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-tools: true
+    embed-resources: true
+execute:
+  echo: true
+  cache: false
+  error: false
+---
+
+Run from the project root. Bond terms, prices and the Treasury curve are the same
+dated inputs as the R companion. This chapter independently recomputes the Merton
+bridge, bond and CDS values, issuer calibration, sensitivity tests and sovereign
+example. SciPy bounded least squares replaces R's `nlminb` for issuer curves;
+the objective, bounds and three starting points are preserved and checked.
+
+```{python}
+from pathlib import Path
+import sys
+sys.path.insert(0,str(Path.cwd()))
+sys.path.insert(0,str(Path('chapters/04-credit-spreads-cds/helpers').resolve()))
+sys.path.insert(0,str(Path('chapters/03-merton/helpers').resolve()))
+from itertools import product
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
+from scipy.optimize import brentq
+from scipy.integrate import quad
+from valuation import (survival_schedule,coupon_components,price_coupon,price_from_yield,coupon_ytm,
+    cds_components,hull_schedule,hull_components,make_bonds,discount,evaluate,bond_components,
+    ytm,yield_price,call_yield)
+from model import Inputs,calibrate
+from shared.output import setup,show_table,show_figure,finish,BLUE,RED,GREEN
+out = setup('04-credit-spreads-cds')
+values = {}
+def quantities(labels,entries):
+    return pd.DataFrame({'Quantity':labels,'Value':entries})
+def descriptive(columns,rows):
+    return pd.DataFrame(rows,columns=columns)
+fit = calibrate(Inputs(equity=3,equity_vol=.8,rate=.05,maturity=1,debt=10))
+pd_merton = fit['pd']
+debt_value = fit['V0']-3
+pv_debt = 10*np.exp(-.05)
+merton_spread = np.log(10/debt_value)-.05
+values.update(pd_merton=pd_merton,market_value_debt=debt_value,merton_implied_spread=merton_spread)
+```
+
+### Table 4.1 {#result-table-4-1}
+
+```{python}
+show_table(out,'4.1',quantities(['Merton risk-neutral PD','Model debt value','Promised debt','Merton spread (bp)'],
+    [pd_merton,debt_value,10,merton_spread*10000]))
+```
+
+## 4.1 Default timing
+
+```{python}
+face,r,recovery,coupon = 100,.04,.4,.05
+h = np.repeat(.025,5)
+schedule = survival_schedule(h)
+values['example_sched'] = schedule.to_dict('list')
+```
+
+### Table 4.2 {#result-table-4-2}
+
+```{python}
+show_table(out,'4.2',schedule.rename(columns={'period':'Year','h':'Conditional PD','survival_start':'Survival at start',
+    'marginal_pd':'Marginal PD','survival_end':'Survival at end','cumulative_pd':'Cumulative PD'}).round(6))
+```
+
+The marginal probability in year 2 is `0.975 * 0.025`. Survival weights the promised
+payments; marginal default probability weights the recovery paid in each period.
+
+## 4.2 A risky zero-coupon bond
+
+```{python}
+zero_rf = face/(1+r)**5
+zero_price = price_coupon(face,0,r,recovery,h)
+zero_yield = (face/zero_price)**.2-1
+values.update(zero_risk_free_price=zero_rf,zero_risky_price=zero_price,
+    zero_risky_yield=zero_yield,zero_spread=zero_yield-r)
+```
+
+### Table 4.3 {#result-table-4-3}
+
+```{python}
+show_table(out,'4.3',quantities(['Risk-free price','Risky price','Risky yield','Spread (bp)'],
+    [zero_rf,zero_price,zero_yield,10000*(zero_yield-r)]))
+```
+
+## 4.3 A risky coupon bond
+
+```{python}
+coupon_rf = price_from_yield(face,coupon,r,5)
+coupon_price = price_coupon(face,coupon,r,recovery,h)
+coupon_yield = coupon_ytm(coupon_price,face,coupon,5)
+parts = coupon_components(face,coupon,r,recovery,h)
+assert np.isclose(parts.sum(),coupon_price)
+values.update(coupon_risk_free_price=coupon_rf,coupon_risky_price=coupon_price,
+    coupon_risky_yield=coupon_yield,coupon_spread=coupon_yield-r)
+```
+
+### Table 4.4 {#result-table-4-4}
+
+```{python}
+show_table(out,'4.4',quantities(['Risk-free price','Risky price','Risky yield','Spread (bp)'],
+    [coupon_rf,coupon_price,coupon_yield,10000*(coupon_yield-r)]))
+```
+
+### Table 4.5 {#result-table-4-5}
+
+```{python}
+show_table(out,'4.5',pd.DataFrame({'Component':['Survival-weighted coupons','Recovery','Survival-weighted principal','Total'],
+    'Present value':np.r_[parts,coupon_price],'Share of price':np.r_[parts/coupon_price,1]}))
+```
+
+### Figure 4.1 {#result-figure-4-1}
+
+```{python}
+h_grid = np.linspace(.001,.1,100)
+prices = np.array([price_coupon(face,coupon,r,recovery,np.repeat(p,5)) for p in h_grid])
+yields = np.array([coupon_ytm(p,face,coupon,5) for p in prices])
+values['coupon_sensitivity'] = dict(h=h_grid,price=prices,yield_value=yields,spread_bps=(yields-r)*10000)
+fig,axes = plt.subplots(1,2,figsize=(9,4),layout='constrained')
+for ax,y,label,color in zip(axes,[prices,(yields-r)*10000],['Bond price','Credit spread (bp)'],[BLUE,RED]):
+    ax.plot(h_grid,y,color=color,lw=2)
+    ax.set(xlabel='Annual conditional PD',ylabel=label)
+    ax.xaxis.set_major_formatter(PercentFormatter(1))
+show_figure(out,'4.1',fig)
+```
+
+### Table 4.6 {#result-table-4-6}
+
+```{python}
+show_table(out,'4.6',descriptive(['Object','Role','Python calculation'],[
+    ['Conditional PD','Default probability given survival','h'],['Survival','Weights coupons and principal','survival_end'],
+    ['Marginal PD','Weights each recovery payment','marginal_pd'],['Recovery','Fraction repaid after default','recovery'],
+    ['Risky price','Discounted expected payments','price_coupon()'],['Credit spread','Extra promised yield','coupon_ytm()-r']]))
+```
+
+## 4.4 Real-world and pricing probabilities
+
+### Table 4.7 {#result-table-4-7}
+
+```{python}
+show_table(out,'4.7',descriptive(['Question','Probability','Use'],[
+    ['How often do similar borrowers default?','Real-world PD','Scoring, expected loss and underwriting'],
+    ['What default risk is consistent with prices?','Risk-neutral / market-implied PD','Bond and CDS pricing, relative value and hedging']]))
+```
+
+### Table 4.8 {#result-table-4-8}
+
+```{python}
+show_table(out,'4.8',quantities(['Real-world PD assumption','Recovery','Default-loss spread (bp)',
+    'Market spread (bp)','Extra spread (bp)','Approximate spread-implied PD'],[.01,.4,.01*.6*10000,120,60,.012/.6]))
+```
+
+## 4.5 Annual CDS payments
+
+```{python}
+merton_cds = cds_components(.05,.4,[pd_merton],notional=100)
+values['merton_cds_spread'] = merton_cds['fair_spread']
+reference_recovery = 1-(1-debt_value/pv_debt)/pd_merton
+values['merton_cds_reference_recovery'] = reference_recovery
+values['merton_cds_reference_spread'] = cds_components(.05,reference_recovery,[pd_merton])['fair_spread']
+```
+
+### Table 4.9 {#result-table-4-9}
+
+```{python}
+show_table(out,'4.9',quantities(['Merton one-year PD','Recovery','LGD','Fair spread (bp)','PV protection per 100','PV premium per 100'],
+    [pd_merton,.4,.6,merton_cds['fair_spread']*10000,merton_cds['protection_leg'],
+     merton_cds['premium_annuity']*merton_cds['fair_spread']]))
+```
+
+### Figure 4.2 {#result-figure-4-2}
+
+```{python}
+spreads = np.linspace(0,.2,100)
+fig,ax = plt.subplots(figsize=(8,4.5))
+ax.plot(spreads,spreads*merton_cds['premium_annuity'],label='Premium leg',color=BLUE)
+ax.axhline(merton_cds['protection_leg'],label='Protection leg',color=RED)
+ax.axvline(merton_cds['fair_spread'],ls='--',color='#222222')
+ax.text(.58,.35,f'Fair spread {merton_cds["fair_spread"]*10000:.1f} bp',transform=ax.transAxes)
+ax.set(xlabel='Annual CDS spread',ylabel='PV per 100 notional')
+ax.xaxis.set_major_formatter(PercentFormatter(1))
+ax.legend(loc='upper center',bbox_to_anchor=(.5,-.18),ncol=2)
+show_figure(out,'4.2',fig)
+```
+
+## 4.6 Accrued premium and midpoint default timing
+
+```{python}
+hazard,rate,rec,maturity = .02,.05,.4,5
+hs = hull_schedule(hazard,rate,rec,maturity)
+hc = hull_components(hazard)
+values['hull_schedule'] = hs.to_dict('list')
+values['hull_components'] = hc
+```
+
+### Table 4.10 {#result-table-4-10}
+
+```{python}
+show_table(out,'4.10',hs[['year','survival_probability','default_probability']].rename(columns=lambda s:s.replace('_',' ').capitalize()).round(6))
+```
+
+### Table 4.11 {#result-table-4-11}
+
+```{python}
+show_table(out,'4.11',pd.DataFrame({'Time (years)':hs.year,'Survival probability':hs.survival_probability,
+    'Discount factor':hs.premium_discount,'PV coefficient multiplying spread':hs.premium_annuity_piece}).round(6))
+```
+
+### Table 4.12 {#result-table-4-12}
+
+```{python}
+show_table(out,'4.12',pd.DataFrame({'Time (years)':hs.default_time,'Default probability':hs.default_probability,
+    'Recovery':rec,'Expected payoff':hs.default_probability*(1-rec),'Discount factor':hs.default_discount,
+    'PV protection payoff':hs.protection_piece}).round(6))
+```
+
+### Table 4.13 {#result-table-4-13}
+
+```{python}
+show_table(out,'4.13',pd.DataFrame({'Time (years)':hs.default_time,'Default probability':hs.default_probability,
+    'Accrual coefficient':.5*hs.default_probability,'Discount factor':hs.default_discount,
+    'PV coefficient multiplying spread':hs.accrual_annuity_piece}).round(6))
+```
+
+### Table 4.14 {#result-table-4-14}
+
+```{python}
+show_table(out,'4.14',quantities(['Regular premium annuity','Accrued premium annuity','Total risky annuity','Protection PV','Fair spread (bp)'],
+    [hc['premium_annuity'],hc['accrual_annuity'],hc['risky_annuity_with_accrual'],hc['protection_leg'],hc['fair_spread']*10000]))
+```
+
+### Table 4.15 {#result-table-4-15}
+
+```{python}
+timing = []
+for frequency in [1,4,12,365]:
+    dt = 1/frequency
+    ends = np.arange(1,maturity*frequency+1)*dt
+    mids = ends-dt/2
+    mass = np.exp(-hazard*(ends-dt))-np.exp(-hazard*ends)
+    discounted_mass = mass*np.exp(-rate*mids)
+    protection = (1-rec)*discounted_mass.sum()
+    accrual = np.sum((mids-np.floor(mids))*discounted_mass)
+    timing.append([frequency,-np.expm1(-hazard*dt),np.exp(-hazard*maturity),protection/(hc['premium_annuity']+accrual)])
+timing = pd.DataFrame(timing,columns=['intervals','interval_pd','survival','spread'])
+values['cds_timing_results'] = timing.to_dict('list')
+table = timing.copy(); table['spread'] *= 10000
+table.columns = ['Intervals per year','Interval PD','Five-year survival','Fair spread (bp)']
+show_table(out,'4.15',table.round(7))
+density = lambda time:hazard*np.exp(-(hazard+rate)*time)
+exact_protection = (1-rec)*quad(density,0,maturity)[0]
+exact_accrual = sum(quad(lambda time:(time-k+1)*density(time),k-1,k)[0] for k in range(1,6))
+values['cds_exact_spread'] = exact_protection/(hc['premium_annuity']+exact_accrual)
+```
+
+Regular premiums remain annual while the default intervals get finer. The exact
+integrals use the same accrued-premium convention, making the timing comparison
+independent of a change in the contract's premium frequency.
+
+### Table 4.16 {#result-table-4-16}
+
+```{python}
+contract_spread = .015
+seller = hc['risky_annuity_with_accrual']*contract_spread-hc['protection_leg']
+values['hull_mtm_seller'] = seller
+show_table(out,'4.16',quantities(['Contract spread (bp)','Fair spread (bp)','PV contractual premiums','PV protection','Seller value','Buyer value'],
+    [150,hc['fair_spread']*10000,hc['risky_annuity_with_accrual']*.015,hc['protection_leg'],seller,-seller]))
+```
+
+### Table 4.17 {#result-table-4-17}
+
+```{python}
+implied = brentq(lambda a:hull_components(a)['fair_spread']-.01,1e-8,1,xtol=1e-13)
+values['hull_implied_hazard'] = implied
+show_table(out,'4.17',quantities(['Observed spread (bp)','Implied flat intensity','Repriced spread (bp)'],
+    [100,implied,10000*hull_components(implied)['fair_spread']]))
+```
+
+### Table 4.18 {#result-table-4-18}
+
+```{python}
+methods = np.array([hazard*(1-rec),hc['protection_leg']/hc['premium_annuity'],hc['fair_spread']])
+show_table(out,'4.18',pd.DataFrame({'Method':['Hazard x LGD','Midpoint without accrual','Midpoint with accrual'],
+    'Fair spread (bp)':methods*10000,'Difference from full value (bp)':(methods-hc['fair_spread'])*10000}))
+```
+
+### Figure 4.3 {#result-figure-4-3}
+
+```{python}
+hazards = np.arange(1,13)*.005
+fig,ax = plt.subplots(figsize=(8,4.5))
+sensitivity = []
+for recovery,color in zip([.2,.4,.6],[RED,BLUE,GREEN]):
+    fair = [hull_components(a,recovery=recovery)['fair_spread'] for a in hazards]
+    sensitivity.extend(zip(hazards,np.repeat(recovery,len(hazards)),fair))
+    ax.plot(hazards,np.array(fair)*10000,'o-',label=f'Recovery {recovery:.0%}',color=color)
+ax.scatter([hazard],[10000*hc['fair_spread']],s=70,facecolor='#F9E79F',edgecolor='#222222',zorder=5)
+ax.set(xlabel='Flat hazard rate',ylabel='Fair CDS spread (bp)')
+ax.xaxis.set_major_formatter(PercentFormatter(1))
+ax.legend(loc='upper center',bbox_to_anchor=(.5,-.18),ncol=3)
+values['hull_cds_sensitivity'] = np.asarray(sensitivity)
+show_figure(out,'4.3',fig)
+```
+
+### Figure 4.4 {#result-figure-4-4}
+
+```{python}
+contract_grid = np.linspace(.005,.02,160)
+fig,ax = plt.subplots(figsize=(8,4.5))
+ax.plot(contract_grid*10000,hc['risky_annuity_with_accrual']*contract_grid-hc['protection_leg'],color=BLUE)
+ax.axhline(0,color='#666666',lw=.7); ax.axvline(hc['fair_spread']*10000,color='#666666',ls='--')
+ax.scatter([150],[seller],color=RED)
+ax.annotate(f'150 bp contract\nValue = {seller:.4f}',xy=(150,seller),xytext=(65,.025),arrowprops={'arrowstyle':'->','color':'#666666'})
+ax.set(xlabel='Contractual CDS spread (bp)',ylabel='Value to seller per 1 notional')
+show_figure(out,'4.4',fig)
+```
+
+### Table 4.19 {#result-table-4-19}
+
+```{python}
+show_table(out,'4.19',quantities(['Risky annuity','Seller gain per 1 bp, per unit','Seller gain per 1 bp, $100m notional'],
+    [hc['risky_annuity_with_accrual'],hc['risky_annuity_with_accrual']*.0001,hc['risky_annuity_with_accrual']*10000]))
+```
+
+### Table 4.20 {#result-table-4-20}
+
+```{python}
+show_table(out,'4.20',descriptive(['Tool','Question','Use'],[
+    ['Fair spread','What makes a new CDS worth zero?','New protection'],['Implied hazard','What intensity matches the quote?','Market-implied risk'],
+    ['Approximation','How close is hazard x LGD?','Sanity check'],['Sensitivity','What changes with hazard or recovery?','Stress assumptions'],
+    ['Mark-to-market','Who benefits from the contractual premium?','Existing positions'],['Premium sensitivity','What is one extra basis point worth?','Compare contracts']]))
+```
+
+## 4.7 Dated corporate bonds and issuer curves
+
+```{python}
+inputs = pd.read_csv('data/credit-spreads/corporate-bond-snapshot.csv')
+curve = pd.read_csv('data/credit-spreads/corporate-treasury-curve.csv').iloc[0].to_dict()
+bonds = make_bonds(inputs)
+target_ids = ['US1248EPCQ45','US92343VGN82']
+targets = [inputs.index[inputs['isin']==isin][0] for isin in target_ids]
+selected = [bonds[i] for i in targets]
+for b in bonds: assert abs(yield_price(b,b.ytm)-b.price)<1e-8
+values['all_bond_yields'] = [b.ytm for b in bonds]
+values['all_accrued'] = [b.accrued for b in bonds]
+values['all_dv01'] = [b.dv01 for b in bonds]
+```
+
+### Table 4.21 {#result-table-4-21}
+
+```{python}
+show_table(out,'4.21',pd.DataFrame({'Item':['ISIN','Coupon (%)','Maturity','Clean price','Accrued interest','Dirty price','Calculated YTM (%)'],
+    **{b.issuer:[b.isin,b.coupon*2,str(b.maturity.date()),b.price,b.accrued,b.price+b.accrued,b.ytm*100] for b in selected}}))
+```
+
+### Figure 4.5 {#result-figure-4-5}
+
+```{python}
+time = np.linspace(.25,8,120)
+df = discount(time,curve,selected[0].settlement)
+zero = -np.log(df)/time
+values['rv_curve_zero'] = zero
+fig,ax = plt.subplots(figsize=(8,4.2))
+ax.plot(time,zero,color=BLUE,lw=2)
+ax.yaxis.set_major_formatter(PercentFormatter(1))
+ax.set(xlabel='Years after settlement',ylabel='Settlement-adjusted zero yield')
+show_figure(out,'4.5',fig)
+```
+
+### Table 4.22 {#result-table-4-22}
+
+```{python}
+results = [evaluate(i,bonds,curve) for i in targets]
+assert not any(x['boundary'] for x in results)
+values['rv_fitted_h'] = np.array([x['h'] for x in results])
+show_table(out,'4.22',pd.DataFrame({'Issuer':[b.issuer for b in selected],'Other bonds':[len(x['train']) for x in results],
+    'Year 1 PD':[x['h'][0] for x in results],'Year 8 PD':[x['h'][1] for x in results],
+    'Model price':[x['model_price'] for x in results]}))
+```
+
+Each target is excluded from its own issuer calibration. The fitted annual PD
+curve interpolates between year 1 and year 8, with recovery of 40%. Residuals are
+weighted by each peer's DV01. The target is then priced using that fitted curve.
+
+## 4.8 Relative value and robustness
+
+```{python}
+comparison = pd.DataFrame([dict(issuer=b.issuer,mark=b.price,model_price=result['model_price'],
+    market_yield=b.ytm,model_yield=result['model_yield'],residual_bp=result['residual_bp'],
+    price_gap=result['model_price']-b.price) for b,result in zip(selected,results)])
+advantage = comparison.residual_bp.iloc[0]-comparison.residual_bp.iloc[1]
+assert np.array_equal(np.sign(comparison.price_gap),np.sign(comparison.residual_bp))
+values['rv_comparison'] = comparison.to_dict('list')
+values['rv_advantage'] = advantage
+```
+
+### Table 4.23 {#result-table-4-23}
+
+```{python}
+table = comparison.set_index('issuer').T.reset_index(names='Measure')
+table['Measure'] = table.Measure.str.replace('_',' ').str.capitalize()
+show_table(out,'4.23',table)
+```
+
+### Figure 4.6 {#result-figure-4-6}
+
+```{python}
+fig,ax = plt.subplots(figsize=(7,4.5))
+bars = ax.bar(comparison.issuer,comparison.residual_bp,color=[BLUE,'#B77900'],width=.5)
+ax.bar_label(bars,fmt='%.2f bp',padding=5)
+ax.set(ylabel='Yield residual (basis points)',ylim=(0,comparison.residual_bp.max()*1.25))
+show_figure(out,'4.6',fig)
+```
+
+### Table 4.24 {#result-table-4-24}
+
+```{python}
+sensitivity_rows = []
+for recovery,shift,weight,timing in product([.2,.4,.6],[-.0025,0,.0025],['dv01','price'],['end','midpoint']):
+    for i in targets:
+        result = evaluate(i,bonds,curve,recovery=recovery,shift=shift,weight=weight,timing=timing)
+        assert not result['boundary']
+        sensitivity_rows.append(dict(issuer=bonds[i].issuer,recovery=recovery,shift=shift,weight=weight,timing=timing,residual=result['residual_bp']))
+sensitivity_frame = pd.DataFrame(sensitivity_rows)
+pairs = sensitivity_frame.query("issuer == 'CCO'").merge(sensitivity_frame.query("issuer == 'Verizon'"),
+    on=['shift','weight','timing'],suffixes=('_CCO','_Verizon'))
+pair_advantage = pairs.residual_CCO-pairs.residual_Verizon
+peer_ranges = [[evaluate(i,bonds,curve,omit=[j])['residual_bp'] for j in result['train']] for i,result in zip(targets,results)]
+peer_range = [min(peer_ranges[0])-max(peer_ranges[1]),max(peer_ranges[0])-min(peer_ranges[1])]
+step_advantage = []
+for knot in [3,3.5,4,4.5,5]:
+    fits = [evaluate(i,bonds,curve,shape='step',knot=knot) for i in targets]
+    assert not any(x['boundary'] for x in fits)
+    step_advantage.append(fits[0]['residual_bp']-fits[1]['residual_bp'])
+robustness = pd.DataFrame({'Check':['Recovery, rates, weighting and timing','Omit one additional peer','Two-level default curve'],
+    'Minimum (bp)':[pair_advantage.min(),peer_range[0],min(step_advantage)],
+    'Maximum (bp)':[pair_advantage.max(),peer_range[1],max(step_advantage)]})
+show_table(out,'4.24',robustness.round(4))
+values['rv_sensitivity_ranges'] = robustness.iloc[:,1:].to_numpy()
+values['rv_sensitivity_all'] = sensitivity_frame.to_dict('records')
+all_residuals = np.array([evaluate(i,bonds,curve)['residual_bp'] for i in range(len(bonds))])
+values['rv_all_residuals'] = all_residuals
+values['rv_rmse'] = [float(np.sqrt(np.mean(all_residuals[inputs.issuer==issuer]**2))) for issuer in ['CCO','Verizon']]
+values['rv_call_yields'] = [call_yield(selected[0],'2030-02-01'),call_yield(selected[1],'2031-12-15')]
+deduction_function = lambda amount:10000*(selected[0].ytm-ytm(selected[0],results[0]['model_price']-amount))-results[1]['residual_bp']
+deduction = brentq(deduction_function,0,3,xtol=1e-12)
+purchase_limit = yield_price(selected[0],results[0]['model_yield']+results[1]['residual_bp']/10000)
+values.update(rv_deduction=deduction,rv_purchase_limit=purchase_limit)
+```
+
+The recovery stress permits different recovery assumptions for the two issuers,
+while matching the rate, weighting and recovery-timing setting across them. The
+peer omission and step-curve tests separately probe calibration sensitivity.
+
+### Figure 4.7 {#result-figure-4-7}
+
+```{python}
+deductions = np.linspace(0,2,81)
+fig,ax = plt.subplots(figsize=(8,4.6))
+ax.plot(deductions,[deduction_function(v) for v in deductions],color=BLUE,lw=2)
+ax.axhline(0,color='#666666',ls='--'); ax.axvline(deduction,color=RED,ls=':')
+ax.scatter([deduction],[0],color=RED)
+ax.text(.04,.08,f'Equal residuals at deduction {deduction:.4f}',transform=ax.transAxes)
+ax.set(xlabel='Deduction per 100 principal',ylabel='CCO minus Verizon residual (bp)')
+show_figure(out,'4.7',fig)
+print(f'Conditional preference: {"CCO" if advantage>0 else "Verizon"}; CCO residual advantage {advantage:.4f} bp.')
+print(f'CCO purchase-price limit under equal residuals: {purchase_limit:.4f}. Value deduction that removes its advantage: {deduction:.4f}.')
+```
+
+The preference compares additional promised yield against each issuer's own
+curve. It remains conditional on the curve, recovery, liquidity and optionality
+assumptions. The deduction calculation quantifies the model-value reduction that
+would remove CCO's advantage; it does not establish an executable arbitrage.
+
+## 4.9 Brazilian sovereign bond
+
+```{python}
+brazil_face,brazil_coupon,brazil_price,brazil_benchmark = 100,.06625,99.091,.0455
+dates = pd.date_range('2025-09-15',periods=20,freq=pd.DateOffset(months=6))
+brazil_time = 200/360+np.arange(20)/2
+interval = np.diff(np.r_[0,brazil_time])
+coupons = brazil_face*brazil_coupon*interval
+promised = coupons.copy(); promised[-1] += brazil_face
+def brazil_price_from_yield(y):
+    return np.sum(promised/(1+y/2)**(2*brazil_time))
+brazil_yield = brentq(lambda y:brazil_price_from_yield(y)-brazil_price,0,.2,xtol=1e-13)
+def brazil_credit_price(h,recovery):
+    survival = (1-h)**brazil_time
+    default = np.r_[1,survival[:-1]]-survival
+    discount = (1+brazil_benchmark/2)**(-2*brazil_time)
+    return np.sum(discount*(coupons*survival+brazil_face*recovery*default))+brazil_face*discount[-1]*survival[-1]
+def brazil_implied_h(recovery):
+    return brentq(lambda h:brazil_credit_price(h,recovery)-brazil_price,0,.9,xtol=1e-13)
+brazil_h = brazil_implied_h(.4)
+values.update(brazil_yield=brazil_yield,brazil_spread=brazil_yield-brazil_benchmark,brazil_h=brazil_h,
+    brazil_pd_maturity=1-(1-brazil_h)**brazil_time[-1],brazil_repriced=brazil_credit_price(brazil_h,.4),
+    brazil_no_default_price=brazil_credit_price(0,.4),brazil_price_at_reported_yield=brazil_price_from_yield(.0675),
+    brazil_time=brazil_time,brazil_coupons=coupons,brazil_promised=promised)
+```
+
+### Table 4.25 {#result-table-4-25}
+
+```{python}
+rows = [0,1,18,19]
+show_table(out,'4.25',pd.DataFrame({'Date':dates[rows].strftime('%Y-%m-%d'),'Years from settlement':brazil_time[rows],
+    'Coupon':coupons[rows],'Total payment':promised[rows]}).round(6))
+```
+
+### Table 4.26 {#result-table-4-26}
+
+```{python}
+brazil_recoveries = np.array([.2,.4,.6])
+brazil_h_values = np.array([brazil_implied_h(R) for R in brazil_recoveries])
+brazil_fixed_prices = np.array([brazil_credit_price(brazil_h,R) for R in brazil_recoveries])
+values['brazil_h_values'] = brazil_h_values
+values['brazil_fixed_prices'] = brazil_fixed_prices
+show_table(out,'4.26',pd.DataFrame({'Recovery':brazil_recoveries,'Fitted annual PD':brazil_h_values,
+    'Fitted maturity PD':1-(1-brazil_h_values)**brazil_time[-1],'Price at fixed PD':brazil_fixed_prices}))
+assert np.allclose([brazil_credit_price(h,R) for h,R in zip(brazil_h_values,brazil_recoveries)],brazil_price)
+```
+
+### Figure 4.8 {#result-figure-4-8}
+
+```{python}
+recovery_grid = np.linspace(.2,.6,81)
+maturity_pd = 1-(1-np.array([brazil_implied_h(R) for R in recovery_grid]))**brazil_time[-1]
+fig,ax = plt.subplots(figsize=(8,4.5))
+ax.plot(recovery_grid,maturity_pd,color=BLUE,lw=2)
+ax.scatter(brazil_recoveries,1-(1-brazil_h_values)**brazil_time[-1],color=BLUE)
+ax.xaxis.set_major_formatter(PercentFormatter(1)); ax.yaxis.set_major_formatter(PercentFormatter(1))
+ax.set(xlabel='Assumed recovery of principal',ylabel='Price-implied PD by maturity')
+show_figure(out,'4.8',fig)
+```
+
+### Table 4.27 {#result-table-4-27}
+
+```{python}
+show_table(out,'4.27',descriptive(['Step','Analyst question','Output'],[
+    ['Define instrument','Which payments are promised?','Coupon, maturity and seniority'],
+    ['Choose benchmark','Which default-free curve?','Discount factors'],
+    ['Reconcile quotes','Do price and yield use the same schedule?','Price-consistent YTM'],
+    ['Specify recovery','What is repaid after default?','Recovery and LGD'],
+    ['Infer risk','What default rate matches the quote?','Implied PD or intensity'],
+    ['Reprice','What follows from the credit assumptions?','Model price or spread'],
+    ['Compare','Which bond offers extra compensation?','Price and yield residuals'],
+    ['Stress','Does the conclusion survive changed assumptions?','Robust, fragile or inconclusive preference']]))
+finish(out,values)
+```

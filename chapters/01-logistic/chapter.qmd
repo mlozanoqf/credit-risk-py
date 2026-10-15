@@ -1,0 +1,517 @@
+---
+title: "Logistic credit scoring: Python"
+jupyter: python3
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-copy: true
+    embed-resources: true
+execute:
+  echo: true
+  cache: false
+  error: false
+---
+
+This companion reproduces the chapter's financial calculations in Python.
+The authorized dataset and frozen split manifest must be supplied locally.
+The manifest preserves R's training/test membership and row order. A seed
+alone would produce a different split in NumPy. R is not needed at runtime.
+
+Statsmodels fits unpenalized binomial GLMs, with the same treatment contrasts
+as R. Quantiles use linear interpolation, corresponding to R's default type 7.
+Density curves use SciPy's KDE bandwidth, so their smoothing differs slightly
+from R's plotting defaults. Numbered results retain the book's identifiers.
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from scipy.special import expit
+from scipy.stats import norm
+from matplotlib.ticker import PercentFormatter, StrMethodFormatter
+from IPython.display import display
+from shared.output import setup,show_table,show_figure,finish,BLUE,RED,GREEN
+from shared.scoring import load_data,design,policy,strategy,calibration,metrics,classification,cases,display_frame
+from shared.scoring_figures import distributions,boxes,density,roc_plot,calibration_plot,COLORS
+out = setup('01-logistic')
+raw,income_ok,clean,train,test,original_names = load_data()
+```
+
+## 1.2 Data exploration and cleaning
+
+### Table 1.1 {#result-table-1-1}
+```{python}
+show_table(out,'1.1',pd.DataFrame({'Original name':original_names,'Book name':raw.columns}))
+```
+
+### Table 1.2 {#result-table-1-2}
+```{python}
+first = raw.head(10).copy()
+first['home'] = first.home.astype(str).map({'MORTGAGE':'M','OWN':'O','RENT':'R'})
+first[['income','l_amnt']] = first[['income','l_amnt']].round(0)
+first.columns = ['Default','Loan ($)','Rate (%)','Grade','Tenure (years)','Home','Income ($)','Age','Sex','Region']
+show_table(out,'1.2',first)
+```
+
+### Table 1.3 {#result-table-1-3}
+```{python}
+home = raw.groupby('home',observed=True).loan_st.agg(['size','sum']).reset_index()
+home['Share of sample'] = home['size']/len(raw)
+show_table(out,'1.3',home[['home','size','Share of sample']].rename(columns={'home':'Home ownership','size':'Loans'}))
+```
+
+### Table 1.4 {#result-table-1-4}
+```{python}
+home['No default'] = home['size']-home['sum']
+home['Default rate'] = home['sum']/home['size']
+show_table(out,'1.4',home[['home','size','No default','sum','Default rate']].rename(
+    columns={'home':'Home ownership','size':'Loans','sum':'Defaults'}))
+```
+
+### Figure 1.1 {#result-figure-1-1}
+```{python}
+fig,ax = plt.subplots()
+ax.hist(raw['int'],bins=np.arange(np.floor(raw['int'].min()*2)/2,raw['int'].max()+.5,.5),
+         density=True,color='white',edgecolor='black',lw=.5)
+ax.set(xlabel='Interest rate (%)',ylabel='Density')
+show_figure(out,'1.1',fig)
+```
+
+The income plots below use stacked bin counts. Each dot represents one record;
+their horizontal positions are income-bin centers rather than exact incomes.
+
+```{python}
+def income_dots(frame,width):
+    bins = np.floor(frame.income.to_numpy()/width).astype(int)
+    centers,counts = np.unique(bins,return_counts=True)
+    fig,ax = plt.subplots()
+    ax.scatter(np.repeat((centers+.5)*width,counts),
+               np.concatenate([np.arange(n) for n in counts]),s=2,alpha=.35,color=BLUE)
+    ax.set(xlabel='Annual income ($)',yticks=[],ylabel='')
+    ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+    return fig
+```
+
+### Figure 1.2 {#result-figure-1-2}
+```{python}
+show_figure(out,'1.2',income_dots(raw,100000))
+```
+
+### Figure 1.3 {#result-figure-1-3}
+```{python}
+show_figure(out,'1.3',income_dots(income_ok,10000))
+display(pd.Series({'Input records':len(raw),'Excluded income':len(raw)-len(income_ok),
+                   'Excluded employment':len(income_ok)-len(clean),'Retained':len(clean)}))
+display(income_ok.loc[income_ok.emp_len>income_ok.age-16,['age','emp_len']])
+display(clean.groupby('sex',observed=True).income.agg(['mean','median','min','max','count']))
+```
+
+## 1.3 Fitting logistic models
+
+The design helper constructs columns explicitly. It keeps the reference
+category for each factor and applies natural logarithms to loan amount and
+income. Its source is in `shared/scoring.py`.
+
+```{python}
+display(pd.DataFrame({'Sample':['Cleaned','Training','Test'],
+                      'Records':[len(clean),len(train),len(test)],
+                      'Default rate':[clean.loan_st.mean(),train.loan_st.mean(),test.loan_st.mean()]}))
+models,pred = {},{}
+for name in ['age','int','multi','full']:
+    models[name] = sm.GLM(train.loan_st.to_numpy(float),design(train,name),
+                          family=sm.families.Binomial()).fit(tol=1e-10,maxiter=100)
+    pred[name] = np.asarray(models[name].predict(design(test,name)))
+display(models['multi'].summary())
+beta0,beta1 = models['age'].params
+display(pd.DataFrame({'Age':[18,60],'Score':beta0+beta1*np.array([18,60]),
+                      'Predicted PD':expit(beta0+beta1*np.array([18,60]))}))
+```
+
+### Figure 1.4 {#result-figure-1-4}
+```{python}
+ages = np.arange(-1000,501)
+fig,ax = plt.subplots(figsize=(8,4.8))
+ax.plot(ages,expit(beta0+beta1*ages),color=COLORS['age'])
+for age,xytext in zip([train.age.min(),train.age.max()],[(.66,.42),(.83,.73)]):
+    p = expit(beta0+beta1*age)
+    ax.vlines(age,0,p,color=RED,ls=':',lw=.8)
+    ax.hlines(p,ages.min(),age,color=RED,ls=':',lw=.8)
+    ax.plot(age,p,'o',color=RED)
+    ax.annotate(f'Age {age:.0f}\nPD {p:.2%}',(age,p),xytext=xytext,textcoords='axes fraction',
+                arrowprops={'arrowstyle':'-','ls':':','color':RED},ha='center',
+                bbox={'facecolor':'white','edgecolor':'none'})
+ax.set(xlabel='Age',ylabel='Age-model predicted default probability')
+ax.yaxis.set_major_formatter(PercentFormatter(1))
+show_figure(out,'1.4',fig)
+```
+
+### Table 1.5 {#result-table-1-5}
+```{python}
+m = models['multi']
+odds = pd.DataFrame({'Term':m.params.index,'Coefficient':m.params.values,
+                     'Std error':m.bse.values,'Odds ratio':np.exp(m.params.values),
+                     '95% OR lower':np.exp(m.params.values-1.96*m.bse.values),
+                     '95% OR upper':np.exp(m.params.values+1.96*m.bse.values),
+                     'p-value':m.pvalues.values})
+odds['Reading'] = np.where(odds['p-value']>=.05,'Unclear at 5%',
+                          np.where(odds['Odds ratio']>1,'Increase in odds','Decrease in odds'))
+show_table(out,'1.5',odds.iloc[1:].round(6))
+print('Odds multiplier for 10% more income:',np.exp(m.params['log(income)']*np.log(1.1)))
+```
+
+### Table 1.6 {#result-table-1-6}
+```{python}
+show_table(out,'1.6',pd.DataFrame({'Model':list(models),'AIC':[m.aic for m in models.values()]}))
+```
+
+## 1.4 Predicted probabilities and decisions
+
+```{python}
+y = test.loan_st.to_numpy(int)
+full = pred['full']
+john = test.index.get_loc(6)
+display(test.iloc[[john]])
+display(pd.Series({name:p[john] for name,p in pred.items()},name='John Doe predicted PD'))
+```
+
+### Figure 1.5 {#result-figure-1-5}
+```{python}
+fig,ax = plt.subplots()
+ax.scatter(np.arange(1,len(test)+1),pred['age'],s=2,alpha=.35,color=COLORS['age'])
+ax.set(xlabel='Observation (test set)',ylabel='Age-model predicted default probability')
+ax.yaxis.set_major_formatter(PercentFormatter(1))
+show_figure(out,'1.5',fig)
+```
+
+### Figure 1.6 {#result-figure-1-6}
+```{python}
+show_figure(out,'1.6',distributions({'age':pred['age']}))
+```
+
+### Figure 1.7 {#result-figure-1-7}
+```{python}
+show_figure(out,'1.7',distributions({k:pred[k] for k in ['int','multi']}))
+```
+
+### Figure 1.8 {#result-figure-1-8}
+```{python}
+show_figure(out,'1.8',boxes({k:pred[k] for k in ['age','int','multi']}))
+```
+
+### Figure 1.9 {#result-figure-1-9}
+```{python}
+scores = design(test)@models['full'].params
+grid = np.linspace(-10,10,1001)
+fig,ax = plt.subplots(figsize=(8,4.8))
+ax.plot(grid,expit(grid),color=BLUE)
+for j,xytext in zip([np.argmin(full),np.argmax(full)],[(.25,.4),(.7,.63)]):
+    s,p = float(scores.iloc[j]),full[j]
+    ax.vlines(s,0,p,color=RED,ls=':',lw=.8)
+    ax.hlines(p,-10,s,color=RED,ls=':',lw=.8)
+    ax.plot(s,p,'o',color=RED)
+    ax.annotate(f'Score {s:.3f}\nPD {p:.2%}',(s,p),xytext=xytext,textcoords='axes fraction',
+                arrowprops={'arrowstyle':'-','color':RED,'ls':':'},ha='center',
+                bbox={'facecolor':'white','edgecolor':'none'})
+ax.set(xlabel='Full-model score (log odds)',ylabel='Predicted default probability')
+ax.yaxis.set_major_formatter(PercentFormatter(1))
+show_figure(out,'1.9',fig)
+```
+
+### Table 1.7 {#result-table-1-7}
+```{python}
+show_table(out,'1.7',pd.DataFrame([{'Model':k,'Minimum PD':p.min(),'Maximum PD':p.max(),
+                                  'AIC':models[k].aic} for k,p in pred.items()]))
+```
+
+### Figure 1.10 {#result-figure-1-10}
+```{python}
+show_figure(out,'1.10',distributions({k:pred[k] for k in ['multi','full']}))
+```
+
+### Figure 1.11 {#result-figure-1-11}
+```{python}
+show_figure(out,'1.11',boxes(pred))
+```
+
+### Figure 1.12 {#result-figure-1-12}
+```{python}
+fig,ax = plt.subplots()
+ax.scatter(np.arange(1,len(test)+1),full,s=2,alpha=.3,color=BLUE)
+ax.axhline(.15,color=RED,ls='--',lw=.9)
+ax.text(.98,.96,f'Rejected {(full>.15).mean():.1%}\nAccepted {(full<=.15).mean():.1%}',
+         transform=ax.transAxes,ha='right',va='top',bbox={'facecolor':'white','edgecolor':'none'})
+ax.set(xlabel='Observation (test set)',ylabel='Full-model predicted default probability')
+ax.yaxis.set_major_formatter(PercentFormatter(1))
+show_figure(out,'1.12',fig)
+```
+
+```{python}
+def cutoff_density(cutoff):
+    fig,ax = plt.subplots()
+    grid,d = density(ax,full,'Full logistic',BLUE)
+    ax.axvline(cutoff,color=RED,ls='--',lw=.9)
+    ax.set_ylim(0,d.max()*1.4)
+    for x,text in [(cutoff/2,f'Accepted\n{(full<=cutoff).mean():.1%}'),
+                    (cutoff+.55*(full.max()-cutoff),f'Rejected\n{(full>cutoff).mean():.1%}')]:
+        ax.text(x,d.max()*1.32,text,ha='center',va='top',
+                bbox={'facecolor':'white','edgecolor':'none'})
+    return fig
+```
+
+### Figure 1.13 {#result-figure-1-13}
+```{python}
+show_figure(out,'1.13',cutoff_density(.15))
+```
+
+### Table 1.8 {#result-table-1-8}
+```{python}
+show_table(out,'1.8',cases(test,full,.15,np.arange(6))[['Predicted PD','Predicted class','Decision']])
+```
+
+### Table 1.9 {#result-table-1-9}
+```{python}
+show_table(out,'1.9',cases(test,full,.15,np.arange(4500,4510)))
+```
+
+## 1.5 Confusion matrices and acceptance targets
+
+```{python}
+cm15 = classification(full,y,.15)
+display(pd.Series(cm15))
+cut80 = np.quantile(full,.8,method='linear')
+cut65 = np.quantile(full,.65,method='linear')
+print('80% target maps to PD cutoff:',cut80)
+print('Realized acceptance:',np.mean(full<=cut80))
+```
+
+The target is a quantile input. The realized rate counts predictions at or
+below the resulting cutoff, including ties. Linear interpolation locates a
+cutoff between adjacent sorted scores; it does not smooth the score distribution.
+
+### Table 1.10 {#result-table-1-10}
+```{python}
+show_table(out,'1.10',pd.DataFrame([
+    {'Rule':'Full, 15% cutoff','Accuracy':cm15['accuracy'],'Defaults detected':cm15['TP'],'Accepted defaults':cm15['FN']},
+    {'Rule':'Always no default','Accuracy':1-y.mean(),'Defaults detected':0,'Accepted defaults':y.sum()},
+    {'Rule':'Always default','Accuracy':y.mean(),'Defaults detected':y.sum(),'Accepted defaults':0}]))
+```
+
+### Figure 1.14 {#result-figure-1-14}
+```{python}
+show_figure(out,'1.14',cutoff_density(cut80))
+```
+
+### Table 1.11 {#result-table-1-11}
+```{python}
+targets = np.arange(1,11)/10
+show_table(out,'1.11',pd.DataFrame({'Target acceptance':targets,
+                                  'PD cutoff':np.quantile(full,targets,method='linear')}))
+```
+
+### Table 1.12 {#result-table-1-12}
+```{python}
+cm80 = classification(full,y,cut80)
+show_table(out,'1.12',pd.DataFrame({'Outcome':['TN','FP','FN','TP'],
+                                  '15% cutoff':[cm15[k]/len(y) for k in ['TN','FP','FN','TP']],
+                                  '80% acceptance':[cm80[k]/len(y) for k in ['TN','FP','FN','TP']]}))
+```
+
+### Table 1.13 {#result-table-1-13}
+```{python}
+show_table(out,'1.13',cases(test,full,cut80,np.arange(130,140)))
+```
+
+### Table 1.14 {#result-table-1-14}
+```{python}
+show_table(out,'1.14',cases(test,full,cut80,np.arange(12)))
+```
+
+### Table 1.15 {#result-table-1-15}
+```{python}
+show_table(out,'1.15',cases(test,full,cut80,np.flatnonzero(full<=cut80)[:10]))
+```
+
+### Table 1.16 {#result-table-1-16}
+```{python}
+p80 = policy(full,y,.8)
+show_table(out,'1.16',pd.DataFrame({'Quantity':['Accepted defaults','Accepted applications','Bad rate'],
+                                  'Value':[p80['accepted_defaults'],p80['accepted'],p80['bad_rate']]}))
+```
+
+### Table 1.17 {#result-table-1-17}
+```{python}
+p65 = policy(full,y,.65)
+show_table(out,'1.17',pd.DataFrame({'Quantity':['Accepted defaults','Accepted applications','Bad rate'],
+                                  'Value':[p65['accepted_defaults'],p65['accepted'],p65['bad_rate']]}))
+```
+
+## 1.6 Acceptance strategies and financial payoffs
+
+### Table 1.18 {#result-table-1-18}
+```{python}
+bank = {k:strategy(pred[k],y,np.arange(100,-1,-5)/100) for k in ['age','full']}
+show_table(out,'1.18',pd.DataFrame({'Target acceptance':bank['full'].accept_rate,
+                                  'Age-only bad rate':bank['age'].bad_rate,
+                                  'Full-model bad rate':bank['full'].bad_rate}))
+```
+
+### Figure 1.15 {#result-figure-1-15}
+```{python}
+fig,axes = plt.subplots(1,2,figsize=(9,4),sharey=True)
+for ax,k in zip(axes,['age','full']):
+    b = bank[k]
+    ax.plot(b.accept_rate,b.bad_rate,color=COLORS[k],lw=2)
+    for q in [.65,.8]:
+        row = policy(pred[k],y,q)
+        ax.vlines(q,0,row['bad_rate'],color=RED,ls=':',lw=.6)
+        ax.hlines(row['bad_rate'],0,q,color=RED,ls=':',lw=.6)
+    ax.set(title=k,xlabel='Target acceptance rate',xlim=(0,1),ylim=(0,max(y.mean()*1.25,.15)))
+    ax.xaxis.set_major_formatter(PercentFormatter(1,decimals=1))
+    ax.yaxis.set_major_formatter(PercentFormatter(1,decimals=0))
+axes[0].set_ylabel('Bad rate among accepted loans')
+fig.tight_layout()
+show_figure(out,'1.15',fig)
+```
+
+### Table 1.19 {#result-table-1-19}
+```{python}
+payoff = strategy(full,y,[.50,.60,.65,.70,.75,.80,.85,.90])
+show_table(out,'1.19',display_frame(payoff))
+```
+
+### Table 1.20 {#result-table-1-20}
+```{python}
+best = payoff.loc[payoff.net_payoff.idxmax()]
+show_table(out,'1.20',pd.DataFrame({'Quantity':['Target acceptance','Accepted good loans',
+    'Good-loan payoff ($)','Accepted defaults','Default cost ($)','Net payoff ($)'],
+    'Value':[best.accept_rate,best.accepted_good,best.accepted_good,best.accepted_defaults,
+             -5*best.accepted_defaults,best.net_payoff]}))
+print('Expected-payoff PD cutoff:',1/(1+5))
+```
+
+### Table 1.21 {#result-table-1-21}
+```{python}
+cost_rows = []
+for cost in [2,5,10,15]:
+    s = strategy(full,y,cost=cost)
+    row = s.loc[s.net_payoff.idxmax()].to_dict()
+    row['Default cost ($)'] = cost
+    cost_rows.append(row)
+show_table(out,'1.21',display_frame(pd.DataFrame(cost_rows)))
+el_pd,el_ead,el_lgd = full[0],test.iloc[0].l_amnt,.6
+el_expected_loss = el_pd*el_ead*el_lgd
+display(pd.Series({'PD':el_pd,'EAD ($)':el_ead,'LGD':el_lgd,'Expected loss ($)':el_expected_loss}))
+```
+
+## 1.7 Discrimination, calibration and policy
+
+### Table 1.22 {#result-table-1-22}
+```{python}
+show_table(out,'1.22',pd.DataFrame([
+    ['TN','No default','No default','Accept a repaying borrower'],
+    ['FP','Default','No default','Reject a repaying borrower'],
+    ['FN','No default','Default','Accept a defaulting borrower'],
+    ['TP','Default','Default','Reject a defaulting borrower']],
+    columns=['Outcome','Predicted','Observed','Credit consequence']))
+```
+
+### Table 1.23 {#result-table-1-23}
+```{python}
+show_table(out,'1.23',pd.DataFrame([
+    ['Sensitivity','TP/(TP+FN)','Share of actual defaults detected'],
+    ['Specificity','TN/(TN+FP)','Share of actual non-defaults accepted'],
+    ['False positive rate','FP/(TN+FP)','Share of actual non-defaults rejected'],
+    ['False negative rate','FN/(TP+FN)','Share of actual defaults accepted']],
+    columns=['Measure','Calculation','Credit interpretation']))
+```
+
+### Figure 1.16 {#result-figure-1-16}
+```{python}
+show_figure(out,'1.16',roc_plot(y,{k:pred[k] for k in ['full','age']}))
+display(pd.Series({k:metrics(p,y)['auc'] for k,p in pred.items()},name='AUC'))
+```
+
+### Table 1.24 {#result-table-1-24}
+```{python}
+cal = {k:calibration(pred[k],y,test.index) for k in ['full','age']}
+cal_table = pd.concat([t.assign(model=k) for k,t in cal.items()],ignore_index=True)
+show_table(out,'1.24',display_frame(cal_table.drop(columns='brier_score')))
+```
+
+### Figure 1.17 {#result-figure-1-17}
+```{python}
+show_figure(out,'1.17',calibration_plot(cal))
+gap = full.sum()-y.sum()
+assert np.isclose(np.sum(cal['full'].applications*(cal['full'].average_predicted_pd-
+                   cal['full'].observed_default_rate)),gap)
+print('Expected defaults:',full.sum(),'Observed:',y.sum(),'Difference:',gap)
+```
+
+### Table 1.25 {#result-table-1-25}
+```{python}
+brier_rows = [{'Model':k,'Brier score':metrics(pred[k],y)['brier_score'],
+               'Brier skill':metrics(pred[k],y)['brier_skill']} for k in ['full','age']]
+brier_rows.append({'Model':'Constant test default rate','Brier score':np.mean((y-y.mean())**2),'Brier skill':0})
+show_table(out,'1.25',pd.DataFrame(brier_rows))
+```
+
+### Table 1.26 {#result-table-1-26}
+```{python}
+policy_rows = []
+for k in ['full','age']:
+    for target in [.8,.65]:
+        row = policy(pred[k],y,target)
+        row.update(classification(pred[k],y,row['cutoff']))
+        row['Model'] = k
+        policy_rows.append(row)
+show_table(out,'1.26',display_frame(pd.DataFrame(policy_rows)))
+```
+
+### Figure 1.18 {#result-figure-1-18}
+```{python}
+fig = roc_plot(y,{'full':full}); ax = fig.axes[0]
+for q,color,loc in [(.65,'black',(.55,.46)),(.8,RED,(.55,.26))]:
+    c = classification(full,y,np.quantile(full,q,method='linear'))
+    ax.plot(c['specificity'],c['sensitivity'],'o',color=color)
+    ax.annotate(f'{q:.0%} target\nSensitivity {c["sensitivity"]:.1%}\nSpecificity {c["specificity"]:.1%}',
+                (c['specificity'],c['sensitivity']),xytext=loc,textcoords='axes fraction',
+                color=color,arrowprops={'arrowstyle':'-','color':color,'ls':':'},
+                bbox={'facecolor':'white','edgecolor':'none'})
+show_figure(out,'1.18',fig)
+```
+
+### Figure 1.19 {#result-figure-1-19}
+```{python}
+# A random benchmark has a different realization from R; assess it near AUC 0.5.
+random_by_file = pd.Series(np.random.default_rng(2020).uniform(size=len(y)),index=np.sort(test.index))
+random_scores = random_by_file.loc[test.index].to_numpy()
+show_figure(out,'1.19',roc_plot(y,{'Random score':random_scores}))
+print('Random-score AUC:',metrics(random_scores,y)['auc'])
+```
+
+### Figure 1.20 {#result-figure-1-20}
+```{python}
+show_figure(out,'1.20',roc_plot(y,{'Perfect score':y}))
+print('Perfect-score AUC:',metrics(y,y)['auc'])
+```
+
+The acceptance strategies use the observed test outcomes to illustrate financial
+trade-offs. Selecting the best row here is a retrospective comparison. A lending
+policy requires separate tuning and prospective validation.
+
+```{python}
+values = {'clean_counts':[len(raw),len(income_ok),len(clean),len(train),len(test)],
+          'train_rows':train.index.to_numpy(),'test_rows':test.index.to_numpy(),
+          'coefficients':{k:m.params.to_numpy() for k,m in models.items()},
+          'standard_errors':{k:m.bse.to_numpy() for k,m in models.items()},
+          'p_values':{k:m.pvalues.to_numpy() for k,m in models.items()},
+          'aic':{k:m.aic for k,m in models.items()},'predictions':pred,
+          'metrics':{k:metrics(p,y) for k,p in pred.items()},
+          'calibration':{k:t.to_dict('list') for k,t in cal.items()},
+          'policies':policy_rows,'payoff':payoff.to_dict('list'),
+          'cost_sensitivity':cost_rows,'expected_loss':el_expected_loss,
+          'random_auc':metrics(random_scores,y)['auc'],'perfect_auc':metrics(y,y)['auc']}
+finish(out,values)
+```

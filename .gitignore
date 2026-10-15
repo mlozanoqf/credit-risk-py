@@ -1,0 +1,16 @@
+/.venv/
+/output/
+/.quarto/
+/.local/
+**/__pycache__/
+**/.ipynb_checkpoints/
+**/chapter.html
+**/chapter_files/
+**/*.ipynb
+/data/credit-scoring/*
+!/data/credit-scoring/README.md
+*.pdf
+*.zip
+.env
+AGENTS.md
+agents_*.md

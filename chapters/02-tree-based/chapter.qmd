@@ -1,0 +1,540 @@
+---
+title: "Tree-based credit scoring: Python"
+jupyter: python3
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-copy: true
+    embed-resources: true
+execute:
+  echo: true
+  cache: false
+  error: false
+---
+
+This chapter executes independently, rebuilding the shared cleaning, frozen
+split and logistic benchmark from the authorized data. It asks how alternative
+models change predicted default risk and lending decisions on the same loans.
+
+**Python adaptation.** The single tree uses scikit-learn CART on treatment-coded
+predictors. R's `rpart` can group several factor levels in a split and uses a
+relative misclassification cost-complexity parameter. Scikit-learn searches
+individual encoded columns and has a different pruning criterion. Here the
+depth and minimum sample restrictions are explicit, with no cost-complexity
+pruning. Consequently the tree, leaf IDs and predictions differ. Its own
+computed results support the interpretations below.
+
+XGBoost preserves the objective, features, 160 rounds, learning rate and other
+model settings. The installed Python and R library versions differ. The seed
+1049419804 is the engine seed recorded by the R fit after `set.seed(567)`;
+Python passes that value directly. It was taken from R's saved configuration,
+before examining alternative seeds. Comparisons use the same test borrowers.
+
+```{python}
+import importlib.util
+from pathlib import Path
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter,MaxNLocator,FuncFormatter
+from scipy.special import expit,logit
+from sklearn.metrics import roc_auc_score,log_loss
+import xgboost as xgb
+from IPython.display import display,Markdown
+from shared.output import setup,show_table,show_figure,finish,BLUE,RED,GREEN
+from shared.scoring import load_data,fit_logistic,design,metrics,policy,strategy,calibration,display_frame
+from shared.scoring_figures import distributions,roc_plot,calibration_plot,COLORS
+spec = importlib.util.spec_from_file_location('tree_helpers',Path('chapters/02-tree-based/helpers/models.py'))
+helpers = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helpers)
+figure_spec = importlib.util.spec_from_file_location('tree_figures',Path('chapters/02-tree-based/helpers/figures.py'))
+tree_figures = importlib.util.module_from_spec(figure_spec)
+figure_spec.loader.exec_module(tree_figures)
+out = setup('02-tree-based')
+_,_,clean,train,test,_ = load_data()
+models,logistic_pred = fit_logistic(train,test)
+y = test.loan_st.to_numpy(int)
+ytrain = train.loan_st.to_numpy(int)
+xtrain,xtest = design(train,intercept=False),design(test,intercept=False)
+```
+
+## 2.2 A single decision tree
+
+```{python}
+from sklearn.tree import DecisionTreeClassifier
+tree = DecisionTreeClassifier(criterion='gini',max_depth=4,min_samples_split=100,
+                              min_samples_leaf=33,ccp_alpha=0,random_state=567)
+tree.fit(xtrain,ytrain)
+pred_tree = tree.predict_proba(xtest)[:,1]
+print('Terminal leaves:',tree.get_n_leaves(),'Distinct test PDs:',len(np.unique(pred_tree)))
+```
+
+### Figure 2.1 {#result-figure-2-1}
+```{python}
+show_figure(out,'2.1',tree_figures.tree_figure(tree,list(xtrain.columns)))
+```
+
+The shared root is shown above two panels, one for each root branch, so all
+nodes remain readable. Within each panel the left branch satisfies the displayed
+condition and the right branch does not. The terminal boxes are leaves. Each assigns its training default proportion
+to every test borrower reaching it. Internal nodes only route borrowers.
+Scikit-learn numbers nodes in depth-first order, including both internal nodes
+and leaves; the leaf IDs in the next table refer directly to this figure.
+
+### Table 2.1 {#result-table-2-1}
+```{python}
+leaves = helpers.leaf_rules(tree,list(xtrain.columns))
+test_leaf = tree.apply(xtest)
+leaves['Test loans'] = [int(np.sum(test_leaf==i)) for i in leaves.Leaf]
+leaves['Test default rate'] = [float(y[test_leaf==i].mean()) if np.any(test_leaf==i) else np.nan
+                              for i in leaves.Leaf]
+show_table(out,'2.1',leaves)
+```
+
+### Table 2.2 {#result-table-2-2}
+```{python}
+tree_metrics = metrics(pred_tree,y)
+show_table(out,'2.2',pd.DataFrame({'Quantity':['Terminal leaves','Distinct test PDs','Minimum PD','Maximum PD','AUC','Brier score'],
+    'Value':[tree.get_n_leaves(),len(np.unique(pred_tree)),pred_tree.min(),pred_tree.max(),
+             tree_metrics['auc'],tree_metrics['brier_score']]}))
+```
+
+## 2.3 Following boosting corrections
+
+### Table 2.3 {#result-table-2-3}
+```{python}
+show_table(out,'2.3',pd.DataFrame([
+    ['Borrower characteristics','One row of the design matrix','Inputs used to route a borrower through each tree'],
+    ['Observed default','Binary label y','Outcome used to estimate the model'],
+    ['Initial default probability','base_score','Training default rate before adding trees'],
+    ['Current score','output_margin','Log odds before the logistic transformation'],
+    ['New tree','One boosting round','Adds a regularized correction to the score'],
+    ['Predicted PD','predict','Logistic transformation of the accumulated score']],
+    columns=['Credit-scoring object','Python/XGBoost object','Meaning']))
+```
+
+### Table 2.4 {#result-table-2-4}
+```{python}
+show_table(out,'2.4',pd.DataFrame({'Matrix':['Training','Test'],'Rows':[len(xtrain),len(xtest)],
+                                 'Encoded predictors':[xtrain.shape[1],xtest.shape[1]]}))
+print('Encoded columns:',', '.join(xtrain.columns))
+```
+
+```{python}
+dtrain = xgb.DMatrix(xtrain,label=ytrain,nthread=1)
+dtest = xgb.DMatrix(xtest,label=y,nthread=1)
+base_pd = float(ytrain.mean())
+base_margin = logit(base_pd)
+params = dict(objective='binary:logistic',eval_metric=['logloss','auc'],max_depth=3,
+              eta=.05,subsample=.8,colsample_bytree=.8,min_child_weight=20,
+              reg_lambda=1,base_score=base_pd,seed=1049419804,nthread=1,tree_method='hist')
+history = {}
+booster = xgb.train(params,dtrain,num_boost_round=160,evals=[(dtrain,'train'),(dtest,'test')],
+                    evals_result=history,verbose_eval=False)
+pred_xgb = booster.predict(dtest)
+pred_xgb_train = booster.predict(dtrain)
+rounds,scores,path_pd,case_indices = helpers.checkpoint_paths(booster,dtest,y,base_pd)
+case_names = ['Default case','Non-default case']
+checkpoints = [0,5,20,60,100,160]
+```
+
+### Table 2.5 {#result-table-2-5}
+```{python}
+show_table(out,'2.5',pd.DataFrame([
+    ['Objective',params['objective'],'Binary default probabilities'],
+    ['Maximum depth',3,'Limits interactions in each tree'],
+    ['Learning rate (eta)',.05,'Scales each new correction'],
+    ['Row fraction',.8,'Samples training rows per tree'],
+    ['Column fraction',.8,'Samples encoded predictors per tree'],
+    ['Minimum child weight',20,'Requires sufficient summed Hessian in each child'],
+    ['L2 penalty (lambda)',1,'Regularizes leaf corrections'],
+    ['Initial PD',base_pd,'Training default rate'],
+    ['Boosting rounds',160,'Fixed model length; not selected using these test results'],
+    ['Engine seed',1049419804,'Same effective seed recorded in the R model configuration']],
+    columns=['Setting','Value','Role']))
+```
+
+The two illustrative cases use the R companion's selection rule: among observed
+defaults with rising final PD and non-defaults with falling final PD, select
+the largest log-loss improvement plus 0.05 times the total checkpoint score
+movement. Their identities may change across implementations. This selection
+illustrates successful corrections; overall model quality is evaluated later
+over the entire test set.
+
+### Table 2.6 {#result-table-2-6}
+```{python}
+region_names = {'E':'East','N':'North','NE':'Northeast','NW':'Northwest','S':'South',
+                'SE':'Southeast','SW':'Southwest','W':'West'}
+profile = pd.DataFrame({'Quantity':['Test-set position (1-based)','Original file row','Observed default',
+    'Age','Rate (%)','Grade','Loan ($)','Income ($)','Employment (years)','Home','Sex','Region',
+    'Initial PD','PD at round 5','PD at round 20','PD at round 160']})
+for name,i in zip(case_names,case_indices):
+    r = test.iloc[i]
+    profile[name] = [i+1,int(test.index[i]),int(y[i]),r.age,r['int'],str(r.grade),r.l_amnt,r.income,
+        r.emp_len,str(r.home),f'{r.sex} ({"female" if str(r.sex)=="1" else "male"})',
+        f'{r.region} ({region_names[str(r.region)]})',base_pd,path_pd[i,rounds.index(5)],
+        path_pd[i,rounds.index(20)],path_pd[i,-1]]
+show_table(out,'2.6',profile)
+```
+
+### Table 2.7 {#result-table-2-7}
+```{python}
+path_rows = []
+for name,i in zip(case_names,case_indices):
+    previous_score,previous_round = base_margin,0
+    for r in checkpoints:
+        j = rounds.index(r)
+        path_rows.append({'Case':name,'Checkpoint':f'{r} (+{r-previous_round} trees)',
+            'Score change':scores[i,j]-previous_score,'Running score':scores[i,j],'Predicted PD':path_pd[i,j]})
+        previous_score,previous_round = scores[i,j],r
+show_table(out,'2.7',pd.DataFrame(path_rows))
+```
+
+### Table 2.8 {#result-table-2-8}
+```{python}
+individual_loss = lambda outcome,p: -(outcome*np.log(p)+(1-outcome)*np.log1p(-p))
+loss_rows = []
+for name,i in zip(case_names,case_indices):
+    initial = individual_loss(y[i],base_pd)
+    final = individual_loss(y[i],pred_xgb[i])
+    loss_rows.append({'Case':name,'Observed default':y[i],'Initial PD':base_pd,
+        'PD at round 5':path_pd[i,rounds.index(5)],'Final PD':pred_xgb[i],
+        'Initial log-loss':initial,'Final log-loss':final,'Loss reduction':initial-final})
+show_table(out,'2.8',pd.DataFrame(loss_rows))
+```
+
+### Table 2.9 {#result-table-2-9}
+```{python}
+applicant_index = case_indices[0]  # Zero-based position; profile displays this value + 1.
+applicant = xgb.DMatrix(xtest.iloc[[applicant_index]],nthread=1)
+leaf_ids = booster.predict(applicant,pred_leaf=True)[0].astype(int)
+tree_dump = booster.trees_to_dataframe()
+def leaf_value(round_number,leaf_id):
+    hit = tree_dump[(tree_dump.Tree==round_number-1)&(tree_dump.Node==leaf_id)&(tree_dump.Feature=='Leaf')]
+    assert len(hit)==1
+    return float(hit.Gain.iloc[0])
+leaf_values = np.array([leaf_value(r,leaf_ids[r-1]) for r in range(1,6)])
+first_scores = np.array([booster.predict(applicant,output_margin=True,iteration_range=(0,r))[0]
+                         for r in range(1,6)])
+np.testing.assert_allclose(base_margin+np.cumsum(leaf_values),first_scores,atol=5e-7,rtol=2e-6)
+arithmetic = [
+    ['Select applicant',f'xtest.iloc[[{applicant_index}]]',f'Test position {applicant_index+1}; file row {test.index[applicant_index]}'],
+    ['Initial PD','ytrain.mean()',base_pd],
+    ['Initial score',r'$F_0=\log[p_0/(1-p_0)]$',base_margin]]
+previous = base_margin
+for r in [1,2]:
+    delta = leaf_values[r-1]
+    arithmetic.extend([
+        [f'Round {r}: leaf',f'booster.predict(applicant, pred_leaf=True)[0, {r-1}]',int(leaf_ids[r-1])],
+        [f'Round {r}: correction',f'leaf_value({r}, {leaf_ids[r-1]})',delta],
+        [f'Round {r}: updated score',f'$F_{r} = {previous:.6f} + ({delta:.6f})$',first_scores[r-1]],
+        [f'Round {r}: updated PD',f'$p_{r} = 1/[1+\exp(-F_{r})]$',expit(first_scores[r-1])]])
+    previous = first_scores[r-1]
+show_table(out,'2.9',pd.DataFrame(arithmetic,columns=['Step','Code or calculation','Result']))
+```
+
+`pred_leaf=True` returns an applicant-by-tree matrix. Row 0 refers to the single
+selected applicant, and column 0 to the first tree. The leaf correction read
+from the dump already includes the learning rate; adding it directly avoids
+applying eta twice. The assertion checks this arithmetic against the model's
+own predicted score.
+
+### Table 2.10 {#result-table-2-10}
+```{python}
+show_table(out,'2.10',pd.DataFrame({'Round':range(1,6),'Leaf ID':leaf_ids[:5],
+    'Previous score':np.r_[base_margin,first_scores[:-1]],'Leaf correction':leaf_values,
+    'Updated score':first_scores,'Updated PD':expit(first_scores)}))
+```
+
+### Figure 2.2 {#result-figure-2-2}
+```{python}
+fig,axes = plt.subplots(1,2,figsize=(10,4.8),sharey=True)
+for ax,name,i in zip(axes,case_names,case_indices):
+    ax.plot(rounds,path_pd[i],'-o',color=BLUE,label='XGBoost checkpoints')
+    ax.axhline(base_pd,color='.5',ls=':',lw=.8,label='Initial PD')
+    ax.axhline(logistic_pred['full'][i],color=RED,ls='--',lw=1,label='Full logistic PD')
+    ax.set(title=f'{name}: test position {i+1}',xlabel='Boosting rounds')
+    ax.text(.97,.56 if y[i] else .94,f'Final PD {pred_xgb[i]:.2%}',transform=ax.transAxes,ha='right',va='top',
+            bbox={'facecolor':'white','edgecolor':'none'})
+    ax.yaxis.set_major_formatter(PercentFormatter(1))
+axes[0].set_ylabel('Predicted default probability')
+handles,labels = axes[0].get_legend_handles_labels()
+fig.legend(handles,labels,loc='lower center',ncol=3)
+fig.tight_layout(rect=(0,.1,1,1))
+show_figure(out,'2.2',fig)
+```
+
+## 2.4 Estimation and final predictions
+
+The estimation call above fits 160 trees once. Checkpoints use prefixes of that
+same ensemble through `iteration_range=(0, rounds)`. The first bound is inclusive
+and the second exclusive. A separate test verifies that these prefixes agree
+with a shorter fit using the same settings and seed.
+
+### Table 2.11 {#result-table-2-11}
+```{python}
+show_table(out,'2.11',pd.DataFrame([
+    ['Training data','dtrain',f'{len(train):,} rows; {xtrain.shape[1]} predictors'],
+    ['Outcome','ytrain','1 = default; 0 = no default'],
+    ['Parameters','params','Explicit objective, learning rate, sampling and regularization'],
+    ['Model size','num_boost_round=160','Fixed number of boosting rounds'],
+    ['Evaluation sets','train, test','Monitoring only; no early stopping']],
+    columns=['Input','Object','Meaning']))
+```
+
+### Table 2.12 {#result-table-2-12}
+```{python}
+show_table(out,'2.12',pd.DataFrame({'Quantity':['Training loans','Test loans','Encoded predictors','Boosting rounds','Trees'],
+    'Value':[len(train),len(test),xtrain.shape[1],booster.num_boosted_rounds(),tree_dump.Tree.nunique()]}))
+```
+
+### Figure 2.3 {#result-figure-2-3}
+```{python}
+show_figure(out,'2.3',distributions({'logi_full':logistic_pred['full'],'xgboost':pred_xgb}))
+```
+
+### Figure 2.4 {#result-figure-2-4}
+```{python}
+fig,axes = plt.subplots(1,2,figsize=(10,5),sharex=True,sharey=True)
+limit = max(logistic_pred['full'].max(),pred_xgb.max())*1.05
+for ax,value,title in zip(axes,[0,1],['Observed non-default','Observed default']):
+    mask = y==value
+    ax.scatter(logistic_pred['full'][mask],pred_xgb[mask],s=8,alpha=.25,color=BLUE)
+    ax.plot([0,limit],[0,limit],ls='--',lw=.8,color='.5')
+    ax.set(title=title,xlim=(0,limit),ylim=(0,limit),xlabel='Full logistic predicted PD')
+    ax.set_aspect('equal'); ax.xaxis.set_major_formatter(PercentFormatter(1)); ax.yaxis.set_major_formatter(PercentFormatter(1))
+axes[0].set_ylabel('XGBoost predicted PD')
+fig.tight_layout()
+show_figure(out,'2.4',fig)
+```
+
+### Figure 2.5 {#result-figure-2-5}
+```{python}
+learning_rounds = np.arange(20,161,20)
+learning = pd.DataFrame({'rounds':learning_rounds,
+    'train_auc':[history['train']['auc'][r-1] for r in learning_rounds],
+    'test_auc':[history['test']['auc'][r-1] for r in learning_rounds]})
+fig,ax = plt.subplots()
+ax.plot(learning['rounds'],learning.test_auc,'o-',color=BLUE,label='Test AUC')
+ax.plot(learning['rounds'],learning.train_auc,'o--',color='.5',label='Train AUC')
+ax.set(xlabel='Boosting rounds',ylabel='AUC')
+ax.legend(loc='lower right')
+show_figure(out,'2.5',fig)
+```
+
+### Table 2.13 {#result-table-2-13}
+```{python}
+best_test = learning.loc[learning.test_auc.idxmax()]
+diagnostic = learning.copy()
+diagnostic['Train minus test AUC'] = diagnostic.train_auc-diagnostic.test_auc
+show_table(out,'2.13',diagnostic.rename(columns={'rounds':'Round','train_auc':'Train AUC','test_auc':'Test AUC'}))
+print('Highest monitored test AUC occurs at',int(best_test['rounds']),'rounds.')
+print('Final train minus test AUC:',learning.train_auc.iloc[-1]-learning.test_auc.iloc[-1])
+```
+
+A gap describes performance on these two samples. A late deterioration in test
+AUC while training AUC rises is evidence worth investigating, but a single
+curve cannot establish performance on future lending cohorts. The test curve
+here is descriptive; an operational round count should be chosen on separate
+validation data before the final test evaluation.
+
+### Table 2.14 {#result-table-2-14}
+```{python}
+show_table(out,'2.14',pd.DataFrame([
+    ['Estimate','Training set','Fit trees and their leaf corrections'],
+    ['Tune','Separate validation or cross-validation','Choose rounds and regularization'],
+    ['Evaluate','Untouched test cohort','Measure discrimination, calibration and policy results'],
+    ['Monitor','Later lending cohorts','Check drift, calibration and realized losses']],
+    columns=['Stage','Data','Purpose']))
+```
+
+### Table 2.15 {#result-table-2-15}
+```{python}
+xgb_metrics = metrics(pred_xgb,y)
+show_table(out,'2.15',pd.DataFrame({'Quantity':['Minimum PD','Median PD','Maximum PD','AUC','Brier score'],
+    'Value':[pred_xgb.min(),np.median(pred_xgb),pred_xgb.max(),xgb_metrics['auc'],xgb_metrics['brier_score']]}))
+```
+
+## 2.5 Understanding the fitted ensemble
+
+### Figure 2.6 {#result-figure-2-6}
+```{python}
+gain = pd.Series(booster.get_score(importance_type='total_gain')).reindex(xtrain.columns,fill_value=0)
+gain = gain/gain.sum()
+top = gain.nlargest(12).sort_values()
+fig,ax = plt.subplots(figsize=(7,5))
+ax.barh(top.index,top.values,color=BLUE)
+ax.set_xlabel('Share of total split gain')
+fig.tight_layout()
+show_figure(out,'2.6',fig)
+```
+
+### Figure 2.7 {#result-figure-2-7}
+```{python}
+shap = helpers.contributions(booster,dtest)
+mean_abs_shap = pd.Series(np.mean(np.abs(shap[:,:-1]),axis=0),index=xtrain.columns)
+top = mean_abs_shap.nlargest(12).sort_values()
+fig,ax = plt.subplots(figsize=(7,5))
+ax.barh(top.index,top.values,color=BLUE)
+ax.set_xlabel('Mean absolute contribution (log-odds units)')
+fig.tight_layout()
+show_figure(out,'2.7',fig)
+```
+
+Split gain measures reductions in the training objective. Mean absolute
+contributions measure the magnitude of each feature's allocated contribution
+to test-set scores. They answer different questions, so their rankings can differ.
+
+### Table 2.16 {#result-table-2-16}
+```{python}
+john = test.index.get_loc(6)
+selected = [john]+case_indices
+show_table(out,'2.16',pd.DataFrame({'Applicant':['John Doe']+case_names,
+    'Test position (1-based)':np.array(selected)+1,'File row':test.index.to_numpy()[selected],
+    'Observed default':y[selected],'Full logistic PD':logistic_pred['full'][selected],
+    'Single-tree PD':pred_tree[selected],'XGBoost PD':pred_xgb[selected]}))
+```
+
+### Table 2.17 {#result-table-2-17}
+```{python}
+john_score = float(shap[john].sum())
+show_table(out,'2.17',pd.DataFrame({'Component':['Baseline score','Sum of feature contributions',
+    'Total score','Logistic transformation','Direct prediction'],
+    'Value':[shap[john,-1],shap[john,:-1].sum(),john_score,expit(john_score),pred_xgb[john]]}))
+```
+
+### Table 2.18 {#result-table-2-18}
+```{python}
+john_contrib = pd.Series(shap[john,:-1],index=xtrain.columns)
+top_names = john_contrib.abs().nlargest(8).index
+show_table(out,'2.18',pd.DataFrame({'Feature':top_names,'Score contribution':john_contrib[top_names].values}))
+```
+
+### Figure 2.8 {#result-figure-2-8}
+```{python}
+pdp = helpers.partial_dependence(booster,test)
+fig,axes = plt.subplots(1,3,figsize=(12,4),sharey=True)
+for ax,var,label in zip(axes,['int','income','age'],['Interest rate (%)','Annual income ($)','Age']):
+    d = pdp[pdp.variable==var]
+    ax.plot(d.value,d.average_predicted_pd,color=BLUE,lw=2)
+    ax.set_xlabel(label)
+    ax.xaxis.set_major_locator(MaxNLocator(4))
+    if var=='income': ax.xaxis.set_major_formatter(FuncFormatter(lambda v,pos:f'${v/1000:.0f}k'))
+    ax.yaxis.set_major_formatter(PercentFormatter(1))
+axes[0].set_ylabel('Average predicted PD')
+fig.tight_layout()
+show_figure(out,'2.8',fig)
+```
+
+At each grid point the code replaces one predictor for every test borrower,
+rebuilds the encoded matrix and averages predicted PDs. This is a model-based
+summary. Correlated characteristics may make some replacements atypical, so
+the curve should be interpreted as model sensitivity rather than a causal effect.
+
+## 2.6 Comparing models and lending strategies
+
+```{python}
+predictions = {'logi_full':logistic_pred['full'],'single_tree':pred_tree,'xgboost':pred_xgb}
+model_metrics = pd.DataFrame([dict(model=k,**metrics(p,y)) for k,p in predictions.items()])
+strategies = pd.concat([strategy(p,y).assign(model=k) for k,p in predictions.items()],ignore_index=True)
+cal = {k:calibration(predictions[k],y,test.index) for k in ['logi_full','xgboost']}
+best_by_model = strategies.loc[strategies.groupby('model').net_payoff.idxmax()].copy()
+best_overall = best_by_model.loc[best_by_model.net_payoff.idxmax()]
+```
+
+### Table 2.19 {#result-table-2-19}
+```{python}
+table_metrics = model_metrics[['model','auc','brier_score','brier_skill']].copy()
+baseline = pd.DataFrame([{'model':'Constant test default rate','auc':np.nan,
+                          'brier_score':np.mean((y-y.mean())**2),'brier_skill':0}])
+show_table(out,'2.19',display_frame(pd.concat([table_metrics,baseline],ignore_index=True)))
+```
+
+### Figure 2.9 {#result-figure-2-9}
+```{python}
+show_figure(out,'2.9',roc_plot(y,predictions))
+```
+
+### Table 2.20 {#result-table-2-20}
+```{python}
+show_table(out,'2.20',display_frame(pd.concat([t.assign(model=k) for k,t in cal.items()],ignore_index=True)))
+```
+
+### Figure 2.10 {#result-figure-2-10}
+```{python}
+show_figure(out,'2.10',calibration_plot(cal))
+```
+
+### Figure 2.11 {#result-figure-2-11}
+```{python}
+fig,ax = plt.subplots()
+for name,d in strategies.groupby('model'):
+    ax.plot(d.accept_rate,d.bad_rate,'o-',color=COLORS[name],label=name)
+ax.set(xlabel='Target acceptance rate',ylabel='Bad rate among accepted loans')
+ax.xaxis.set_major_formatter(PercentFormatter(1)); ax.yaxis.set_major_formatter(PercentFormatter(1))
+ax.legend(loc='upper left')
+show_figure(out,'2.11',fig)
+```
+
+### Figure 2.12 {#result-figure-2-12}
+```{python}
+fig,ax = plt.subplots()
+for name,d in strategies.groupby('model'):
+    color = COLORS[name]
+    ax.plot(d.accept_rate,d.net_payoff,'o-',color=color,label=name)
+    row = d.loc[d.net_payoff.idxmax()]
+    ax.vlines(row.accept_rate,4000,row.net_payoff,color=color,ls=':',lw=.8)
+    ax.hlines(row.net_payoff,.5,row.accept_rate,color=color,ls=':',lw=.8)
+ax.set(xlabel='Target acceptance rate',ylabel='Net payoff ($)',ylim=(4000,strategies.net_payoff.max()*1.05))
+ax.xaxis.set_major_formatter(PercentFormatter(1))
+ax.legend(loc='upper center',bbox_to_anchor=(.5,-.18),ncol=3)
+fig.subplots_adjust(bottom=.23)
+show_figure(out,'2.12',fig)
+```
+
+### Table 2.21 {#result-table-2-21}
+```{python}
+show_table(out,'2.21',pd.DataFrame({'Quantity':['Model','Target acceptance','Actual acceptance','Accepted good loans',
+    'Good-loan payoff ($)','Accepted defaults','Default cost ($)','Net payoff ($)'],
+    'Value':[best_overall.model,best_overall.accept_rate,best_overall.actual_accept_rate,
+        best_overall.accepted_good,best_overall.accepted_good,best_overall.accepted_defaults,
+        -5*best_overall.accepted_defaults,best_overall.net_payoff]}))
+```
+
+### Table 2.22 {#result-table-2-22}
+```{python}
+show_table(out,'2.22',display_frame(best_by_model))
+```
+
+```{python}
+display(Markdown(f'The highest net payoff on this grid is **${best_overall.net_payoff:,.0f}**, '
+    f'from **{best_overall.model}** at target acceptance **{best_overall.accept_rate:.0%}**. '
+    'This retrospective comparison uses $1 per repaying loan and $5 per default. '
+    'The ordering is conditional on those payoffs, the sample and the tested policies.'))
+```
+
+### Table 2.23 {#result-table-2-23}
+```{python}
+show_table(out,'2.23',pd.DataFrame([
+    ['Data','Check availability, quality, time ordering and population coverage'],
+    ['Calibration','Compare predicted and realized default risk by cohort and segment'],
+    ['Policy','Include exposure, recovery, costs and approval constraints'],
+    ['Validation','Separate tuning from final evaluation and test on later cohorts'],
+    ['Governance','Review permissible inputs, fairness, explainability and ongoing monitoring']],
+    columns=['Area','Credit-policy check']))
+```
+
+```{python}
+values = {'train_rows':train.index.to_numpy(),'test_rows':test.index.to_numpy(),
+    'tree_leaves':tree.get_n_leaves(),'tree_predictions':pred_tree,'xgb_predictions':pred_xgb,
+    'logistic_predictions':logistic_pred['full'],'metrics':model_metrics.to_dict('records'),
+    'strategy':strategies.to_dict('records'),'best_by_model':best_by_model.to_dict('records'),
+    'calibration':{k:t.to_dict('list') for k,t in cal.items()},'learning':learning.to_dict('list'),
+    'case_indices_zero_based':case_indices,'checkpoint_rounds':rounds,
+    'case_scores':scores[case_indices],'case_pds':path_pd[case_indices],
+    'leaf_values':leaf_values,'first_scores':first_scores,'john_contributions':shap[john],
+    'importance':gain.to_dict(),'shap_importance':mean_abs_shap.to_dict(),
+    'partial_dependence':pdp.to_dict('records')}
+finish(out,values)
+```

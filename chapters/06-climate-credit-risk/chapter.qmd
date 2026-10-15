@@ -1,0 +1,364 @@
+---
+title: "Climate Credit Risk: Python companion"
+jupyter: python3
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-tools: true
+    embed-resources: true
+execute:
+  echo: true
+  cache: false
+  error: false
+---
+
+Run from the project root. This chapter uses the same frozen NGFS/IIASA files,
+sector exposures and recoveries as the R companion. All calculations start from
+those inputs. The simulation uses NumPy's random stream, so individual scenarios
+and Monte Carlo estimates differ from R. Portfolio amounts are illustrative inputs;
+the climate adjustments retain their external source and scenario meaning.
+
+```{python}
+from pathlib import Path
+import sys
+sys.path.insert(0,str(Path.cwd()))
+sys.path.insert(0,str(Path('chapters/06-climate-credit-risk/helpers').resolve()))
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
+from matplotlib.colors import TwoSlopeNorm
+from scipy.stats import norm
+from climate import SCENARIOS, METRICS, portfolio_inputs, prepare_global, prepare_daps, loss_steps, horizon_losses
+from shared.portfolio import climate_losses, expected_shortfall
+from shared.output import setup, show_table, show_figure, finish, BLUE, RED, GREEN
+out = setup('06-climate-credit-risk')
+values = {}
+palette = dict(zip(SCENARIOS.values(),[BLUE,RED,GREEN]))
+def text_table(columns,rows):
+    return pd.DataFrame(rows,columns=columns)
+def money_table(frame):
+    return frame.rename(columns=lambda s:s.replace('_',' ').capitalize())
+```
+
+## 6.1-6.2 Climate scenarios and credit channels
+
+### Table 6.1 {#result-table-6-1}
+
+```{python}
+show_table(out,'6.1',text_table(['Scenario code','NGFS narrative','API run ID','Credit channel'],[
+    ['DIRE',SCENARIOS['DIRE'],74,'Uneven transition and physical pressure across regions and sectors'],
+    ['HWTP',SCENARIOS['HWTP'],75,'Coordinated transition with pressure on high-emission sectors'],
+    ['SWUC',SCENARIOS['SWUC'],76,'Abrupt repricing after delayed adjustment']]))
+```
+
+### Table 6.2 {#result-table-6-2}
+
+```{python}
+show_table(out,'6.2',text_table(['Channel','Credit mechanism','Application','Additional production inputs'],[
+    ['Transition','Policy, technology, demand and financing costs affect repayment capacity','Global sector adjustments','Sector, exposure, maturity, recovery and baseline credit quality'],
+    ['Physical','Damage and business interruption affect cash flow and collateral','Regional DAPS diagnostic','Asset location, hazard, vulnerability, insurance and supply chains']]))
+```
+
+### Table 6.3 {#result-table-6-3}
+
+```{python}
+show_table(out,'6.3',text_table(['Source variable','Source unit','Credit use'],[
+    ['baseline_pd','Percentage points','Baseline one-year default probability'],
+    ['pd_adjustment','Percentage points relative to BAU','Additive climate PD change'],
+    ['corporate_bond_spread_adjustment','Percentage points relative to BAU','Scenario spread change'],
+    ['corporate_bond_price_rel_adjustment','Percent relative to BAU','Relative bond price change'],
+    ['wacc_adjustment','Percentage points relative to BAU','Cost-of-capital change']]))
+```
+
+## 6.3 Preparing the raw files
+
+The optional `helpers/download_data.py` records the equivalent API request. A
+deliberate refresh saves to a separate destination; ordinary chapter execution
+uses the frozen CSVs. API availability and refreshed values can change over time.
+
+```{python}
+portfolio = portfolio_inputs()
+data_dir = Path('data/climate')
+manifest = pd.read_csv(data_dir/'ngfs_climacred_download_manifest.csv')
+raw = pd.read_csv(data_dir/'ngfs_climacred_global_raw.csv')
+climate_credit = prepare_global(raw,portfolio)
+values['climate_credit'] = climate_credit.sort_values(['scenario','portfolio_sector','year']).to_dict('records')
+```
+
+### Table 6.4 {#result-table-6-4}
+
+```{python}
+table = portfolio.copy()
+table['EAD (USD millions)'] = table.pop('ead')/1e6
+table['Recovery (%)'] = 100*table.pop('recovery')
+table['LGD (%)'] = 100-table['Recovery (%)']
+show_table(out,'6.4',table.rename(columns={'portfolio_sector':'Portfolio sector','ngfs_sector':'NGFS sector'}))
+```
+
+### Table 6.5 {#result-table-6-5}
+
+```{python}
+show_table(out,'6.5',manifest[['file','rows','database','downloaded_at_utc']].rename(columns={
+    'file':'File','rows':'Rows','database':'Database','downloaded_at_utc':'Downloaded at UTC'}))
+```
+
+### Table 6.6 {#result-table-6-6}
+
+```{python}
+show_table(out,'6.6',raw[['model','scenario','region','variable','year','value']].head(8))
+```
+
+### Table 6.7 {#result-table-6-7}
+
+```{python}
+show_table(out,'6.7',text_table(['Layer','Object','Role'],[
+    ['External source','NGFS Short-term Scenario Explorer / IIASA','Sector, scenario, region, year and metric'],
+    ['Download','helpers/download_data.py','Explicit optional API request'],
+    ['Frozen files','data/climate/*.csv','Unchanged source observations and manifest'],
+    ['Portfolio assumptions','portfolio','EAD and recovery by sector'],
+    ['Analysis table','climate_credit','Joined, reshaped and converted to decimal quantities']]))
+```
+
+Each variable name is split at its first `|`. The remaining text identifies the
+sector. `prepare_global()` checks unique keys before pivoting and converts all five
+metrics by dividing by 100. A 2 percentage-point adjustment therefore adds 0.02
+to a decimal PD. The portfolio's EAD and recovery enter only after this conversion.
+
+### Table 6.8 {#result-table-6-8}
+
+```{python}
+snapshot = climate_credit.query("year == 2030 and scenario == 'HWTP'").sort_values('portfolio_sector').copy()
+show_table(out,'6.8',pd.DataFrame({'Sector':snapshot.portfolio_sector,
+    'Baseline PD (%)':100*snapshot.baseline_pd,'PD adjustment (pp)':100*snapshot.pd_adjustment,
+    'Climate PD (%)':100*snapshot.climate_pd,
+    'Spread adjustment (bp)':10000*snapshot.corporate_bond_spread_adjustment}).round(4))
+```
+
+## 6.4 Physical risk is local
+
+```{python}
+daps = prepare_daps(pd.read_csv(data_dir/'ngfs_climacred_daps_raw.csv'))
+daps_summary = daps.groupby(['region_label','ngfs_sector']).pd_adjustment.max().unstack()
+values['daps_summary'] = daps_summary.reset_index().to_dict('records')
+```
+
+### Figure 6.1 {#result-figure-6-1}
+
+```{python}
+fig,ax = plt.subplots(figsize=(8,5))
+(100*daps_summary).plot.barh(ax=ax,color=[GREEN,RED,BLUE],width=.75)
+ax.set(xlabel='Maximum PD adjustment during 2024-2030 (percentage points)',ylabel='')
+ax.legend(loc='upper center',bbox_to_anchor=(.5,-.18),ncol=3)
+show_figure(out,'6.1',fig)
+```
+
+### Table 6.9 {#result-table-6-9}
+
+```{python}
+show_table(out,'6.9',text_table(['Required input','Credit purpose'],[
+    ['Borrower geography','Distinguish regional physical shocks'],['Asset and collateral location','Locate the financed asset'],
+    ['Hazard intensity','Measure flood, heat, drought or storm exposure'],['Vulnerability','Translate hazard into damage'],
+    ['Insurance and recovery','Assess liquidity and LGD'],['Business interruption','Translate lost operations into revenue loss'],
+    ['Credit translation','Map damage into PD, LGD or spreads'],['Portfolio aggregation','Combine sector, geography, exposure and dependence']]))
+```
+
+The regional DAPS results diagnose location sensitivity. They are kept separate
+from the global scenario portfolio to avoid adding overlapping shocks mechanically.
+
+## 6.5 Survival-weighted expected loss
+
+```{python}
+horizon_loss = horizon_losses(climate_credit)
+portfolio_loss = horizon_loss.groupby('scenario_label')[['pv_el_baseline','pv_el_climate','incremental_pv_el']].sum()
+portfolio_loss['increase'] = portfolio_loss.pv_el_climate/portfolio_loss.pv_el_baseline-1
+coal_path = climate_credit.query("scenario == 'HWTP' and portfolio_sector == 'Coal' and 2026 <= year <= 2030").sort_values('year')
+coal_steps = loss_steps(coal_path.climate_pd,coal_path.ead.iloc[0],coal_path.recovery.iloc[0])
+coal_steps.insert(0,'Year',coal_path.year.to_numpy())
+values['horizon_loss'] = horizon_loss.to_dict('records')
+values['portfolio_horizon_loss'] = portfolio_loss.reset_index().to_dict('records')
+values['coal_steps'] = coal_steps.to_dict('records')
+```
+
+### Table 6.10 {#result-table-6-10}
+
+```{python}
+table = portfolio_loss.copy()
+table.iloc[:,:3] = table.iloc[:,:3]/1e6
+table['increase'] *= 100
+table.columns = ['Baseline PV EL ($m)','Climate PV EL ($m)','Change in PV EL ($m)','Relative change (%)']
+show_table(out,'6.10',table.reset_index(names='Scenario').round(4))
+```
+
+### Table 6.11 {#result-table-6-11}
+
+```{python}
+table = coal_steps.copy()
+table['PV expected loss ($m)'] = table.pop('PV expected loss')/1e6
+table['EAD ($m)'] = coal_path.ead.iloc[0]/1e6
+table['LGD'] = 1-coal_path.recovery.iloc[0]
+show_table(out,'6.11',table.round(6))
+```
+
+The five annual PDs are treated as conditional probabilities for this application.
+Each year's loss is weighted by survival to its start, then discounted at 4%.
+This prevents counting the same sector exposure as defaulting in multiple years.
+
+### Figure 6.2 {#result-figure-6-2}
+
+```{python}
+fig,ax = plt.subplots(figsize=(8,4.8))
+table = portfolio_loss[['pv_el_baseline','pv_el_climate']]/1e6
+table.columns = ['Baseline','Climate-adjusted']
+table.plot.bar(ax=ax,color=['#666666',RED],rot=0)
+ax.set_xticklabels(['Diverging\nRealities','Highway\nto Paris','Sudden\nWake-up Call'])
+ax.set(xlabel='',ylabel='PV expected loss (USD millions)',ylim=(0,table.max().max()*1.2))
+for container in ax.containers:
+    ax.bar_label(container,fmt='$%.1fm',padding=3)
+ax.legend(loc='upper center',bbox_to_anchor=(.5,-.2),ncol=2)
+show_figure(out,'6.2',fig)
+```
+
+## 6.6 Sector contributions
+
+### Figure 6.3 {#result-figure-6-3}
+
+```{python}
+sector_loss = horizon_loss.pivot(index='portfolio_sector',columns='scenario_label',values='incremental_pv_el')/1e6
+sector_loss = sector_loss.loc[sector_loss.mean(axis=1).sort_values().index]
+fig,ax = plt.subplots(figsize=(8,6))
+sector_loss.plot.barh(ax=ax,color=[palette[x] for x in sector_loss],width=.75)
+ax.set(xlabel='Incremental PV expected loss (USD millions)',ylabel='')
+ax.legend(loc='upper center',bbox_to_anchor=(.5,-.15),ncol=1)
+show_figure(out,'6.3',fig)
+```
+
+### Figure 6.4 {#result-figure-6-4}
+
+```{python}
+heat = climate_credit.query('year == 2030').pivot(index='portfolio_sector',columns='scenario_label',values='pd_adjustment')*100
+heat = heat.loc[heat.mean(axis=1).sort_values().index]
+limit = np.abs(heat.to_numpy()).max()
+fig,ax = plt.subplots(figsize=(8,6))
+im = ax.imshow(heat,cmap='RdBu_r',norm=TwoSlopeNorm(vmin=-limit,vcenter=0,vmax=limit),aspect='auto')
+ax.set_yticks(range(len(heat)),heat.index)
+ax.set_xticks(range(3),['Diverging\nRealities','Highway\nto Paris','Sudden\nWake-up Call'])
+for (i,j),v in np.ndenumerate(heat.to_numpy()):
+    ax.text(j,i,f'{v:.1f}',ha='center',va='center',color='white' if abs(v)>.6*limit else '#222222')
+fig.colorbar(im,ax=ax,label='PD adjustment (pp)')
+show_figure(out,'6.4',fig)
+```
+
+### Figure 6.5 {#result-figure-6-5}
+
+```{python}
+fig,axes = plt.subplots(2,2,figsize=(9,6),sharey=True,layout='constrained')
+for ax,sector in zip(axes.flat,['Coal','Land transport','Power','Technology hardware']):
+    path = climate_credit.query("scenario == 'HWTP'").loc[lambda x:x.portfolio_sector==sector].sort_values('year')
+    ax.plot(path.year,path.baseline_pd,'o--',color='#666666',label='Baseline')
+    ax.plot(path.year,path.climate_pd,'o-',color=RED,label='Climate-adjusted')
+    ax.set(title=sector,ylabel='One-year PD')
+    ax.yaxis.set_major_formatter(PercentFormatter(1))
+fig.legend(*axes.flat[0].get_legend_handles_labels(),loc='outside lower center',ncol=2)
+show_figure(out,'6.5',fig)
+```
+
+## 6.7 Market compensation and the default-loss benchmark
+
+```{python}
+market = climate_credit.query('year == 2030').copy()
+market['default_loss_change_bps'] = market.lgd*(market.climate_pd-market.baseline_pd)*10000
+market['ngfs_spread_bps'] = market.corporate_bond_spread_adjustment*10000
+market['spread_gap_bps'] = market.ngfs_spread_bps-market.default_loss_change_bps
+values['spread_bridge'] = market[['scenario','portfolio_sector','default_loss_change_bps','ngfs_spread_bps','spread_gap_bps']].sort_values(['scenario','portfolio_sector']).to_dict('records')
+```
+
+### Table 6.12 {#result-table-6-12}
+
+```{python}
+top = market.sort_values(['scenario_label','ngfs_spread_bps'],ascending=[True,False]).groupby('scenario_label',sort=False).head(3)
+show_table(out,'6.12',pd.DataFrame({'Scenario':top.scenario_label,'Sector':top.portfolio_sector,
+    'Spread adjustment (bp)':top.ngfs_spread_bps,'Bond price adjustment (%)':100*top.corporate_bond_price_rel_adjustment}).round(4))
+```
+
+### Figure 6.6 {#result-figure-6-6}
+
+```{python}
+fig,axes = plt.subplots(3,1,figsize=(8,8),sharex=True,sharey=True,layout='constrained')
+lo = min(market.default_loss_change_bps.min(),market.ngfs_spread_bps.min())
+hi = max(market.default_loss_change_bps.max(),market.ngfs_spread_bps.max())
+for ax,(code,label) in zip(axes,SCENARIOS.items()):
+    part = market[market.scenario==code]
+    ax.plot([lo,hi],[lo,hi],'--',color='#666666',lw=.7)
+    ax.scatter(part.default_loss_change_bps,part.ngfs_spread_bps,color=palette[label],s=45,alpha=.85)
+    ax.set(title=label,ylabel='NGFS spread change (bp)')
+axes[-1].set_xlabel('Change in PD x LGD benchmark (bp)')
+show_figure(out,'6.6',fig)
+```
+
+The diagonal compares a scenario spread adjustment with the change in annual
+PD times LGD. The NGFS spread adjustment is supplied by CLIMACRED; the horizontal
+coordinate is our simpler calculation. This is a diagnostic comparison rather
+than a calibrated fair CDS quote.
+
+## 6.8 A common-shock portfolio simulation
+
+```{python}
+simulation_input = snapshot.sort_values('portfolio_sector')
+scores,base_events,climate_events,base_loss,climate_loss = climate_losses(
+    simulation_input.baseline_pd,simulation_input.climate_pd,simulation_input.ead,simulation_input.recovery)
+summary = pd.DataFrame([dict(case=name,mean_loss=x.mean(),var_95=np.quantile(x,.95,method='inverted_cdf'),es_95=expected_shortfall(x,.95))
+    for name,x in [('Baseline',base_loss),('Climate-adjusted',climate_loss)]])
+values['loss_summary'] = summary.to_dict('records')
+values['analytic_one_year_el'] = [float(np.dot(simulation_input.ead*simulation_input.lgd,simulation_input[c])) for c in ['baseline_pd','climate_pd']]
+values['loss_mean_se'] = [float(x.std(ddof=1)/np.sqrt(len(x))) for x in [base_loss,climate_loss]]
+np.savez_compressed(out/'simulation-losses.npz',baseline=base_loss,climate=climate_loss)
+```
+
+### Table 6.13 {#result-table-6-13}
+
+```{python}
+table = summary.copy()
+table.iloc[:,1:] = table.iloc[:,1:]/1e6
+table.columns = ['Case','Mean loss ($m)','95% VaR ($m)','95% ES ($m)']
+show_table(out,'6.13',table.round(4))
+```
+
+The same score matrix is used for both cases. Only the PD thresholds change.
+Each simulated default represents the full sector exposure in this stylized
+portfolio; the simulation is intentionally coarse. The one-year 2030 losses
+should be compared with one-year analytical EL, separately from the five-year PV.
+
+### Table 6.14 {#result-table-6-14}
+
+```{python}
+eligible = (base_events.sum(axis=1)==1)&(climate_events.sum(axis=1)==2)&(~(base_events&~climate_events).any(axis=1))
+trace_row = np.flatnonzero(eligible)[0]
+firms = np.flatnonzero(climate_events[trace_row])
+show_table(out,'6.14',pd.DataFrame({'Sector':simulation_input.iloc[firms].portfolio_sector.to_numpy(),
+    'Credit score':scores[trace_row,firms],
+    'Baseline cutoff':norm.ppf(simulation_input.baseline_pd.iloc[firms]),
+    'Climate cutoff':norm.ppf(simulation_input.climate_pd.iloc[firms])}).round(4))
+print(f'Python scenario row {trace_row+1}: baseline loss ${base_loss[trace_row]:,.0f}; climate loss ${climate_loss[trace_row]:,.0f}.')
+```
+
+### Figure 6.7 {#result-figure-6-7}
+
+```{python}
+fig,ax = plt.subplots(figsize=(8,5))
+bins = np.arange(0,max(base_loss.max(),climate_loss.max())/1e6+2.5,2.5)
+for label,loss,color in [('Baseline',base_loss,'#666666'),('Climate-adjusted',climate_loss,RED)]:
+    ax.hist(loss/1e6,bins=bins,alpha=.55,color=color,label=label,edgecolor='white')
+    ax.axvline(np.quantile(loss,.95,method='inverted_cdf')/1e6,color=color,ls='--')
+ax.set(xlabel='Portfolio loss (USD millions)',ylabel='Simulated scenarios')
+ax.legend(loc='upper center',bbox_to_anchor=(.5,-.17),ncol=2)
+show_figure(out,'6.7',fig)
+```
+
+```{python}
+largest = portfolio_loss.incremental_pv_el.idxmax()
+print(f'Largest five-year expected-loss increase: {largest}, ${portfolio_loss.loc[largest,"incremental_pv_el"]/1e6:.3f}m.')
+print(f'One-year climate minus baseline mean loss: ${(climate_loss-base_loss).mean()/1e6:.3f}m.')
+finish(out,values)
+```

@@ -1,0 +1,505 @@
+---
+title: "Portfolio Credit Risk with Copulas: Python companion"
+jupyter: python3
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-tools: true
+    embed-resources: true
+execute:
+  echo: true
+  cache: false
+  error: false
+---
+
+Execute from the project root. The financial inputs, thresholds, loss definitions
+and sample sizes follow the R companion. NumPy uses its own random generator and
+a Cholesky factor, whereas R uses MASS's normal generator and eigendecomposition.
+The distributional models agree; individual simulated rows differ. Every trace
+below is selected from the Python simulation and checked against its own outcomes.
+
+```{python}
+from pathlib import Path
+import sys
+sys.path.insert(0,str(Path.cwd()))
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter, FuncFormatter
+from matplotlib.patches import Rectangle
+from scipy.stats import norm, t
+from shared.portfolio import (expected_shortfall,risk_summary,correlation_matrix,
+    latent_scores,event_summary,vasicek_rate,granular_losses)
+from shared.output import setup,show_table,show_figure,finish,BLUE,RED,GREEN
+out = setup('05-copulas')
+values = {}
+pd_cum = np.array([.01,.03,.06,.10,.15])
+thresholds = norm.ppf(pd_cum)
+values['pd_cum'] = pd_cum
+values['default_threshold'] = thresholds
+values['pd_incremental'] = np.diff(np.r_[0,pd_cum])
+values['threshold_check'] = norm.cdf(thresholds)
+colors = [BLUE,'#B77900',RED]
+def descriptive(columns,rows):
+    return pd.DataFrame(rows,columns=columns)
+def money_summary(frame):
+    result = frame.copy()/1e6
+    names = {'expected_loss':'Expected loss','median_loss':'Median loss','var_95':'VaR 95%',
+             'var_99':'VaR 99%','var_999':'VaR 99.9%','es_99':'ES 99%',
+             'es_999':'ES 99.9%','economic_capital_999':'Capital 99.9%'}
+    return result.rename(columns=lambda x:names[x]+' ($m)').reset_index(names='Case')
+def distribution_plot(matrix,x,xlabel,labels):
+    fig,ax = plt.subplots(figsize=(8,4.5))
+    for j,label in enumerate(labels):
+        ax.plot(x,matrix[:,j],'-o',ms=7,alpha=.8,color=colors[j],label=label)
+    ax.set(xlabel=xlabel,ylabel='Simulated probability',xticks=x)
+    ax.yaxis.set_major_formatter(PercentFormatter(1))
+    ax.legend(loc='upper center',bbox_to_anchor=(.5,1.18),ncol=3)
+    return fig
+```
+
+## 5.1 Dependence and the portfolio problem
+
+### Table 5.1 {#result-table-5-1}
+
+```{python}
+show_table(out,'5.1',descriptive(['Source','Use','Caution'],[
+    ['Historical defaults or migrations','Estimate joint events by sector, rating or region','Rare defaults produce noisy estimates'],
+    ['Equity or asset returns','Market proxies for common credit shocks','Return correlation differs from default correlation'],
+    ['CDS and bond spreads','Credit-market co-movement','Liquidity and risk premia also move spreads'],
+    ['Regulatory or internal benchmark','Documented portfolio reference','May be coarse for a specific portfolio'],
+    ['Stress analysis','Low, base and high dependence','Justify the scenario range']]))
+```
+
+### Figure 5.1 {#result-figure-5-1}
+
+```{python}
+fig,ax = plt.subplots(figsize=(9,1.7))
+positions = [.12,.37,.62,.87]
+labels = ['Individual\nPDs','Shared\ncredit shocks','Simulated\ndefaults','Portfolio\nloss distribution']
+for x,label in zip(positions,labels):
+    ax.add_patch(Rectangle((x-.105,.25),.21,.5,facecolor='#F4F8FB',edgecolor=BLUE))
+    ax.text(x,.5,label,ha='center',va='center')
+for x in positions[:-1]:
+    ax.annotate('',xy=(x+.14,.5),xytext=(x+.11,.5),arrowprops={'arrowstyle':'->','color':'#666666'})
+ax.set(xlim=(0,1),ylim=(0,1)); ax.axis('off')
+show_figure(out,'5.1',fig)
+```
+
+### Table 5.2 {#result-table-5-2}
+
+```{python}
+show_table(out,'5.2',descriptive(['Object','Python object','Financial role'],[
+    ['$Q_i(T)$','pd_cum','Individual cumulative PD'],['$X_i$','latent_scores()','Credit-state score; lower is weaker'],
+    ['$z_i(T)$','norm.ppf(pd_cum)','Default boundary'],['$\\rho$','rho','Score correlation before default classification'],
+    ['$EAD_i$','ead','Exposure at default'],['$R_i$','recovery','Recovered fraction'],['$LGD_i$','1-recovery','Lost fraction']]))
+```
+
+## 5.2 Cumulative PDs and thresholds
+
+### Table 5.3 {#result-table-5-3}
+
+```{python}
+show_table(out,'5.3',pd.DataFrame({'Year':range(1,6),'Cumulative PD':pd_cum,
+    'Incremental PD':np.diff(np.r_[0,pd_cum]),'Default threshold':thresholds,
+    'PD recovered from threshold':norm.cdf(thresholds)}).round(6))
+```
+
+### Table 5.4 {#result-table-5-4}
+
+```{python}
+example_scores = np.array([-1.4,-1.05,-.8,.25])
+show_table(out,'5.4',pd.DataFrame({'Firm':['A','B','C','D'],'Credit score':example_scores,
+    'Threshold':thresholds[-1],'Default by year 5':(example_scores<=thresholds[-1]).astype(int)}))
+```
+
+### Figure 5.2 {#result-figure-5-2}
+
+```{python}
+x = np.linspace(-4,4,8001)
+fig,axes = plt.subplots(1,2,figsize=(8,4),layout='constrained')
+for ax,j,color in zip(axes,[0,4],[BLUE,RED]):
+    ax.plot(x,norm.pdf(x),color='#222222')
+    shaded = np.linspace(-4,thresholds[j],1000)
+    ax.fill_between(shaded,norm.pdf(shaded),color=color,alpha=.88)
+    ax.axvline(thresholds[j],color=color,ls='--')
+    ax.text(.05,.9,f'z = {thresholds[j]:.3f}',transform=ax.transAxes,color=color)
+    ax.set(title=f'Year {j+1}: PD {pd_cum[j]:.0%}',xlabel='Credit-state score',ylabel='Normal density',xlim=(-4,4),ylim=(0,.42))
+    ax.set_box_aspect(1)
+show_figure(out,'5.2',fig)
+```
+
+### Figure 5.3 {#result-figure-5-3}
+
+```{python}
+def threshold_plot(zoom=False):
+    fig,ax = plt.subplots(figsize=(8,4.5))
+    ax.plot(x,norm.cdf(x),color='#222222')
+    for j,(z,p) in enumerate(zip(thresholds,pd_cum)):
+        ax.axvline(z,ls=':',color='#BBBBBB'); ax.axhline(p,ls=':',color='#BBBBBB')
+        ax.scatter(z,p,s=45,label=f'Year {j+1}')
+    ax.set(xlabel='Credit-state score',ylabel='Cumulative probability')
+    if zoom: ax.set(xlim=(-2.5,-.5),ylim=(0,.2))
+    ax.yaxis.set_major_formatter(PercentFormatter(1))
+    ax.legend(loc='center left',bbox_to_anchor=(1, .5))
+    return fig
+show_figure(out,'5.3',threshold_plot())
+```
+
+### Figure 5.4 {#result-figure-5-4}
+
+```{python}
+show_figure(out,'5.4',threshold_plot(zoom=True))
+```
+
+## 5.3 One firm
+
+```{python}
+n_sims = 100000
+one_scores = np.random.default_rng(130575).standard_normal(n_sims)
+one_pd = np.mean(one_scores<=thresholds[-1])
+values['one_firm_sim_pd'] = one_pd
+```
+
+### Table 5.5 {#result-table-5-5}
+
+```{python}
+show_table(out,'5.5',pd.DataFrame({'Year':[5],'Input PD':[.15],'Threshold':[thresholds[-1]],
+    'Simulated PD':[one_pd],'Difference':[one_pd-.15]}))
+```
+
+### Figure 5.5 {#result-figure-5-5}
+
+```{python}
+fig,ax = plt.subplots(figsize=(8,4.5))
+density,edges = np.histogram(one_scores,bins=80,density=True)
+centers = (edges[:-1]+edges[1:])/2
+ax.bar(centers,density,width=np.diff(edges),color=np.where(centers<=thresholds[-1],RED,BLUE),edgecolor='white',linewidth=.3)
+ax.axvline(thresholds[-1],color=RED,ls='--')
+ax.text(.7,.9,f'Threshold {thresholds[-1]:.3f}\nSimulated PD {one_pd:.2%}',transform=ax.transAxes,va='top')
+ax.set(xlim=(-4,4),ylim=(0,.43),xlabel='Simulated credit-state score',ylabel='Density')
+show_figure(out,'5.5',fig)
+```
+
+## 5.4 Two firms
+
+```{python}
+two_rows = []
+for rho in [-.5,-.2,0,.2,.5]:
+    events = latent_scores(n_sims,2,rho)<=thresholds[-1]
+    a,b = events.T
+    pa,pb,both = a.mean(),b.mean(),(a&b).mean()
+    corr = (both-pa*pb)/np.sqrt(pa*(1-pa)*pb*(1-pb))
+    assert np.isclose(corr,np.corrcoef(events.T)[0,1])
+    two_rows.append([rho,pa,pb,both,(a|b).mean(),corr])
+two_firm = pd.DataFrame(two_rows,columns=['rho','PD A','PD B','P(A and B)','P(A or B)','Default correlation'])
+values['two_firm'] = two_firm.to_dict('records')
+```
+
+### Table 5.6 {#result-table-5-6}
+
+```{python}
+show_table(out,'5.6',two_firm.loc[two_firm.rho==.2,['PD A','PD B','P(A and B)']].T.reset_index().set_axis(['Quantity','Value'],axis=1))
+```
+
+### Table 5.7 {#result-table-5-7}
+
+```{python}
+show_table(out,'5.7',two_firm.round(6))
+```
+
+### Figure 5.6 {#result-figure-5-6}
+
+```{python}
+fig,axes = plt.subplots(2,2,figsize=(8,8),layout='constrained')
+for ax,rho in zip(axes.flat,[-.5,-.2,.2,.5]):
+    scores = latent_scores(6000,2,rho)
+    joint = (scores<=thresholds[-1]).all(axis=1)
+    ax.scatter(scores[~joint,0],scores[~joint,1],s=4,alpha=.25,color='#666666')
+    ax.scatter(scores[joint,0],scores[joint,1],s=5,alpha=.6,color=RED)
+    ax.axvline(thresholds[-1],ls='--',color='#222222'); ax.axhline(thresholds[-1],ls='--',color='#222222')
+    ax.text(.53,.05,f'Joint defaults: {joint.sum()}',transform=ax.transAxes,fontsize=9,bbox={'facecolor':'white','edgecolor':'none'})
+    ax.set(title=f'$\\rho={rho}$',xlim=(-4,4),ylim=(-4,4),xlabel='Firm A score',ylabel='Firm B score',aspect='equal')
+show_figure(out,'5.6',fig)
+```
+
+## 5.5 Ten firms
+
+```{python}
+rhos = [0,.2,.5]
+default_scenarios = [latent_scores(n_sims,10,rho)<=thresholds[-1] for rho in rhos]
+counts = [d.sum(axis=1) for d in default_scenarios]
+events = pd.DataFrame([event_summary(d) for d in default_scenarios],index=rhos)
+count_probability = np.column_stack([np.bincount(c,minlength=11)/n_sims for c in counts])
+values['event_summary_numeric'] = events.to_numpy()
+values['count_probability_matrix'] = count_probability
+```
+
+### Table 5.8 {#result-table-5-8}
+
+```{python}
+show_table(out,'5.8',pd.DataFrame(correlation_matrix(10,.2),columns=[f'Firm {i}' for i in range(1,11)]))
+```
+
+### Table 5.9 {#result-table-5-9}
+
+```{python}
+show_table(out,'5.9',pd.DataFrame({'Defaults':range(11),'Frequency':np.bincount(counts[1],minlength=11),'Probability':count_probability[:,1]}))
+```
+
+### Table 5.10 {#result-table-5-10}
+
+```{python}
+show_table(out,'5.10',events.rename(columns=lambda s:s.replace('_',' ').capitalize()).reset_index(names='Copula correlation').round(6))
+```
+
+### Figure 5.7 {#result-figure-5-7}
+
+```{python}
+show_figure(out,'5.7',distribution_plot(count_probability,np.arange(11),'Defaults by year 5',[f'rho = {r}' for r in rhos]))
+```
+
+## 5.6 Monetary losses and expected shortfall
+
+```{python}
+ead = np.repeat(10e6,10)
+recovery = np.repeat(.4,10)
+losses = [d@(ead*(1-recovery)) for d in default_scenarios]
+loss_summary = pd.DataFrame([risk_summary(x) for x in losses],index=rhos)
+values['loss_summary_numeric'] = loss_summary.to_numpy()
+values['loss_expected_theoretical'] = float(np.sum(ead*(1-recovery)*.15))
+# Type-1 quantiles retain the discrete loss amounts. ES includes the exact tail
+# probability, including the required fraction of observations tied at VaR.
+q = np.quantile(losses[1],.99,method='inverted_cdf')
+print({'VaR 99%':q,'Rows strictly above VaR':int(np.sum(losses[1]>q)),
+       'Rows tied at VaR':int(np.sum(losses[1]==q)),
+       'ES 99%':expected_shortfall(losses[1],.99)})
+```
+
+### Table 5.11 {#result-table-5-11}
+
+```{python}
+show_table(out,'5.11',money_summary(loss_summary).round(4))
+```
+
+### Figure 5.8 {#result-figure-5-8}
+
+```{python}
+show_figure(out,'5.8',distribution_plot(count_probability,np.arange(11)*6,'Portfolio loss ($ millions)',[f'rho = {r}' for r in rhos]))
+```
+
+## 5.7 Concentration with unchanged default events
+
+```{python}
+ead_concentrated = np.r_[40e6,np.repeat(60e6/9,9)]
+loss_concentrated = default_scenarios[1]@(ead_concentrated*(1-recovery))
+concentration = pd.DataFrame([risk_summary(losses[1]),risk_summary(loss_concentrated)],index=['Equal exposures','One large borrower'])
+values['concentration_summary_numeric'] = concentration.to_numpy()
+```
+
+### Table 5.12 {#result-table-5-12}
+
+```{python}
+table = money_summary(concentration)
+table.insert(1,'Max EAD ($m)',[10,40])
+show_table(out,'5.12',table.round(4))
+```
+
+### Figure 5.9 {#result-figure-5-9}
+
+```{python}
+fig,axes = plt.subplots(1,2,figsize=(9,4),sharey=True,layout='constrained')
+edges = np.arange(0,65,4)
+for ax,loss,label,color in zip(axes,[losses[1],loss_concentrated],concentration.index,colors[:2]):
+    freq,_ = np.histogram(loss/1e6,bins=edges)
+    mids = (edges[:-1]+edges[1:])/2
+    var = np.quantile(loss,.99,method='inverted_cdf')/1e6
+    ax.bar(mids,freq,width=4,color=np.where(mids>=var,RED,color),edgecolor='white')
+    ax.axvline(var,color=RED,ls='--')
+    ax.set(title=label,xlabel='Portfolio loss ($ millions)',ylabel='Frequency')
+show_figure(out,'5.9',fig)
+```
+
+## 5.8 Shared t-copula scaling
+
+```{python}
+copula_labels = ['Gaussian','t df = 10','t df = 4']
+t_scores = [latent_scores(n_sims,10,.2,df=df) for df in [None,10,4]]
+cutoffs = [norm.ppf(.15),t.ppf(.15,10),t.ppf(.15,4)]
+t_defaults = [s<=z for s,z in zip(t_scores,cutoffs)]
+t_counts = [d.sum(axis=1) for d in t_defaults]
+t_events = pd.DataFrame([event_summary(d) for d in t_defaults],index=copula_labels)
+t_losses = [d@(ead*(1-recovery)) for d in t_defaults]
+t_summary = pd.DataFrame([risk_summary(x) for x in t_losses],index=copula_labels)
+values['tcopula_losses'] = t_summary.to_numpy()
+values['tcopula_events'] = t_events.to_numpy()
+values['tcopula_mean_pd'] = [float(d.mean()) for d in t_defaults]
+```
+
+### Table 5.13 {#result-table-5-13}
+
+```{python}
+trace_row = np.flatnonzero((t_counts[0]==0)&(t_counts[2]>=2))[0]
+firms = np.flatnonzero(t_defaults[2][trace_row])[:2]
+show_table(out,'5.13',pd.DataFrame({'Firm':firms+1,'Normal score':t_scores[0][trace_row,firms],
+    'Scaled score':t_scores[2][trace_row,firms],'Gaussian outcome':'Survival','t-copula outcome':'Default'}).round(4))
+scale = t_scores[0][trace_row,firms]/t_scores[2][trace_row,firms]
+assert np.allclose(scale,scale[0])
+print(f'Python scenario {trace_row+1}; both firms share scale {scale[0]:.6f}.')
+```
+
+### Table 5.14 {#result-table-5-14}
+
+```{python}
+table = t_events.copy()
+table.insert(0,'Mean PD',[d.mean() for d in t_defaults])
+show_table(out,'5.14',table.rename(columns=lambda s:s.replace('_',' ').capitalize()).reset_index(names='Copula').round(6))
+```
+
+### Table 5.15 {#result-table-5-15}
+
+```{python}
+show_table(out,'5.15',money_summary(t_summary).round(4))
+```
+
+### Figure 5.10 {#result-figure-5-10}
+
+```{python}
+t_distribution = np.column_stack([np.bincount(c,minlength=11)/n_sims for c in t_counts])
+values['tcopula_count_matrix'] = t_distribution
+show_figure(out,'5.10',distribution_plot(t_distribution,np.arange(11),'Defaults by year 5',copula_labels))
+```
+
+## 5.9 Credit VaR and copula model risk
+
+```{python}
+confidence = np.array([.95,.99,.999])
+total_ead,pd1,rec,rho = 100e6,.02,.6,.1
+tail_rates = vasicek_rate(pd1,rho,confidence)
+var_loss = total_ead*(1-rec)*tail_rates
+expected_loss = total_ead*(1-rec)*pd1
+factor = np.random.default_rng(130575).standard_normal(200000)
+conditional_pd = norm.cdf((norm.ppf(pd1)-np.sqrt(rho)*factor)/np.sqrt(1-rho))
+vasicek_loss = total_ead*(1-rec)*conditional_pd
+vasicek_es = np.array([expected_shortfall(vasicek_loss,a) for a in confidence])
+values.update(credit_var_rate=tail_rates,credit_var_loss=var_loss,credit_expected_loss=expected_loss,
+    simulated_var_loss=np.quantile(vasicek_loss,confidence,method='inverted_cdf'),simulated_es_loss=vasicek_es)
+```
+
+### Table 5.16 {#result-table-5-16}
+
+```{python}
+show_table(out,'5.16',descriptive(['Quantity','Value'],[
+    ['Total exposure',total_ead],['One-year PD',pd1],['Recovery',rec],['LGD',1-rec],['Correlation',rho]]))
+```
+
+### Table 5.17 {#result-table-5-17}
+
+```{python}
+show_table(out,'5.17',descriptive(['Financial object','Python object','Role'],[
+    ['$Q(T)$','pd1','Individual one-year PD'],['$\\rho$','rho','Common-factor correlation'],
+    ['$\\alpha$','confidence','Loss percentile'],['EAD','total_ead','Total exposure'],['LGD','1-rec','Lost fraction'],
+    ['Tail default rate','vasicek_rate()','Conditional PD in the adverse factor state'],
+    ['Credit VaR','total_ead*(1-rec)*tail_rates','Dollar loss percentile']]))
+```
+
+### Table 5.18 {#result-table-5-18}
+
+```{python}
+qpd,qalpha = norm.ppf(pd1),norm.ppf(.999)
+factor_piece = np.sqrt(rho)*qalpha
+numerator,denominator = qpd+factor_piece,np.sqrt(1-rho)
+show_table(out,'5.18',descriptive(['Step','Calculation','Value'],[
+    ['Default threshold','norm.ppf(pd1)',qpd],['Tail quantile','norm.ppf(.999)',qalpha],
+    ['Factor contribution','sqrt(rho)*qalpha',factor_piece],['Numerator','qpd+factor_piece',numerator],
+    ['Denominator','sqrt(1-rho)',denominator],['Standardized value','numerator/denominator',numerator/denominator],
+    ['Tail default rate','norm.cdf(numerator/denominator)',tail_rates[-1]],
+    ['Credit VaR','total_ead*(1-rec)*tail_rates[-1]',var_loss[-1]]]))
+```
+
+### Table 5.19 {#result-table-5-19}
+
+```{python}
+show_table(out,'5.19',pd.DataFrame({'Confidence':confidence,'Tail default rate':tail_rates,
+    'Credit VaR ($m)':var_loss/1e6,'EL ($m)':expected_loss/1e6,
+    'Capital ($m)':(var_loss-expected_loss)/1e6,'ES ($m)':vasicek_es/1e6}).round(6))
+```
+
+### Table 5.20 {#result-table-5-20}
+
+```{python}
+show_table(out,'5.20',descriptive(['Quantity','Value'],[
+    ['Tail default rate at 99.9%',tail_rates[-1]],['Credit VaR at 99.9%',var_loss[-1]],
+    ['Expected loss',expected_loss],['Capital at 99.9%',var_loss[-1]-expected_loss],['ES at 99.9%',vasicek_es[-1]]]))
+```
+
+### Figure 5.11 {#result-figure-5-11}
+
+```{python}
+fig,ax = plt.subplots(figsize=(8,4.8))
+ax.scatter(factor,vasicek_loss/1e6,s=18,alpha=.12,color='#666666',rasterized=True)
+ax.axhline(var_loss[-1]/1e6,color=RED,ls='--')
+ax.text(.95,.65,f'99.9% Credit VaR ${var_loss[-1]/1e6:.3f}m',transform=ax.transAxes,ha='right',color=RED)
+ax.set(xlabel='Systematic credit factor',ylabel='Conditional portfolio loss ($ millions)')
+show_figure(out,'5.11',fig)
+```
+
+### Table 5.21 {#result-table-5-21}
+
+```{python}
+granular = [granular_losses(df=df) for df in [None,10,4]]
+granular_summary = pd.DataFrame([risk_summary(x) for x in granular],index=copula_labels)
+values['credit_model_summary'] = granular_summary.to_numpy()
+formula = pd.DataFrame([dict(expected_loss=expected_loss,var_99=var_loss[1],var_999=var_loss[2],
+    es_999=vasicek_es[-1],economic_capital_999=var_loss[2]-expected_loss)],index=['Vasicek formula'])
+show_table(out,'5.21',money_summary(pd.concat([formula,granular_summary[formula.columns]])).round(4))
+```
+
+### Figure 5.12 {#result-figure-5-12}
+
+```{python}
+grid = np.linspace(0,max(np.quantile(a,.9995,method='inverted_cdf') for a in granular),160)
+fig,ax = plt.subplots(figsize=(8,4.8))
+for label,loss,color in zip(copula_labels,granular,colors):
+    ordered = np.sort(loss)
+    survival = 1-np.searchsorted(ordered,grid,side='left')/len(loss)
+    valid = survival>0
+    ax.semilogy(grid[valid]/1e6,survival[valid],color=color,label=label)
+ax.set(xlabel='Portfolio loss ($ millions)',ylabel='P(loss >= x)')
+ax.yaxis.set_major_formatter(FuncFormatter(lambda value, position: f"{100 * value:g}%"))
+ax.legend(loc='upper center',bbox_to_anchor=(.5,1.15),ncol=3)
+show_figure(out,'5.12',fig)
+```
+
+### Table 5.22 {#result-table-5-22}
+
+```{python}
+repeats = []
+for seed in range(130576,130596):
+    g = expected_shortfall(granular_losses(seed=seed),.999)
+    student = expected_shortfall(granular_losses(seed=seed,df=4),.999)
+    repeats.append([g,student,student-g])
+repeats = np.asarray(repeats)
+values['credit_tail_repeats'] = repeats
+values['tail_precision_mean'] = repeats.mean(axis=0)
+values['tail_precision_sd'] = repeats.std(axis=0,ddof=1)
+values['tail_precision_se'] = repeats.std(axis=0,ddof=1)/np.sqrt(len(repeats))
+show_table(out,'5.22',pd.DataFrame({'Estimate':['Gaussian ES','t(4) ES','t(4) minus Gaussian'],
+    'Mean ($m)':repeats.mean(axis=0)/1e6,'Run SD ($m)':repeats.std(axis=0,ddof=1)/1e6,
+    'SE of mean ($m)':repeats.std(axis=0,ddof=1)/np.sqrt(len(repeats))/1e6}).round(4))
+```
+
+The repeated runs quantify simulation precision at the 99.9% tail. Discrete VaR
+can jump by one loss amount when a cumulative frequency crosses its confidence
+level. The ES comparison and its sampling error provide additional evidence for
+the copula comparison. The Gaussian and t models preserve the marginal PD while
+changing the frequency of severe joint losses.
+
+```{python}
+np.savez_compressed(out/'simulation-losses.npz',vasicek=vasicek_loss,
+    gaussian=granular[0],t10=granular[1],t4=granular[2],
+    equal=losses[1],concentrated=loss_concentrated)
+print(f'Mean t(4) minus Gaussian 99.9% ES over 20 runs: ${repeats[:,2].mean()/1e6:.3f}m.')
+finish(out,values)
+```

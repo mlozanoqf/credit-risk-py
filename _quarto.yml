@@ -1,0 +1,15 @@
+project:
+  type: default
+  execute-dir: project
+  render:
+    - chapters/00-foundations/chapter.qmd
+    - chapters/01-logistic/chapter.qmd
+    - chapters/02-tree-based/chapter.qmd
+    - chapters/03-merton/chapter.qmd
+    - chapters/04-credit-spreads-cds/chapter.qmd
+    - chapters/05-copulas/chapter.qmd
+    - chapters/06-climate-credit-risk/chapter.qmd
+execute:
+  cache: false
+  error: false
+  daemon: false

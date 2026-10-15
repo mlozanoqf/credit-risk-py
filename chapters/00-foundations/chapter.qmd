@@ -1,0 +1,207 @@
+---
+title: "Foundations for Applied Credit Risk: Python"
+jupyter: python3
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-copy: true
+    embed-resources: true
+execute:
+  echo: true
+  cache: false
+  error: false
+---
+
+These calculations follow the R companion with the same inputs. Run the blocks
+in order. Python uses zero-based positions: the second record has position 1.
+The examples connect records, frequencies, losses and present values before
+the credit-scoring applications. All results are calculated in Python.
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+from scipy.special import expit, logit
+from matplotlib.ticker import PercentFormatter
+from IPython.display import display
+from shared.output import setup, show_figure, finish, BLUE, RED
+out = setup('00-foundations')
+values = {}
+```
+
+## Reading a credit record
+
+```{python}
+records = pd.DataFrame({'loan_id':[101,102,103,104],
+                       'exposure':[1000,2000,1500,3000], 'default':[0,1,0,0]})
+display(records)
+display(records['exposure'])
+display(records.iloc[1])
+print('Exposure of second loan:', records.iloc[1]['exposure'])
+values.update(total_exposure=records.exposure.sum(), observed_defaults=records.default.sum(),
+              number_of_loans=len(records), mean_exposure=records.exposure.mean())
+display(pd.Series(values))
+```
+
+## Frequencies and the population at risk
+
+The move from 8% to 10% is a change of two percentage points. Dividing the change
+by the original probability instead measures the relative increase.
+
+```{python}
+p_before, p_after = .08, .10
+change_pp = 100*(p_after-p_before)
+relative_change = (p_after-p_before)/p_before
+change_bps = 10000*(p_after-p_before)
+display(pd.Series({'Percentage points':change_pp,
+                   'Relative increase (%)':100*relative_change,'Basis points':change_bps}))
+segment_size = np.array([50,50])
+segment_defaults = np.array([2,6])
+segment_pd = segment_defaults/segment_size
+segment_weight = segment_size/segment_size.sum()
+overall_pd = np.sum(segment_weight*segment_pd)
+year1_pd, year2_conditional_pd = 8/100, 5/92
+survival_two_years = (1-year1_pd)*(1-year2_conditional_pd)
+cumulative_two_year_pd = 1-survival_two_years
+display(pd.Series({'Overall PD':overall_pd,'Conditional second-year PD':year2_conditional_pd,
+                   'Cumulative two-year PD':cumulative_two_year_pd}))
+values.update(change_pp=change_pp,relative_change=relative_change,change_bps=change_bps,
+              segment_pd=segment_pd,segment_weight=segment_weight,overall_pd=overall_pd,
+              year1_pd=year1_pd,year2_conditional_pd=year2_conditional_pd,
+              survival_two_years=survival_two_years,cumulative_two_year_pd=cumulative_two_year_pd)
+```
+
+The second-year denominator contains the 92 survivors. The cumulative
+probability counts both years' defaults relative to the original 100 borrowers.
+
+## Expected dollar losses
+
+```{python}
+pd_default, ead, recovery = .08,10000,.40
+lgd = 1-recovery
+loss_in_default = ead*lgd
+expected_loss = pd_default*loss_in_default
+loan_pd = np.array([.02,.06,.10])
+loan_ead = np.array([1000,2000,5000])
+loan_lgd = np.repeat(.4,3)
+loan_el = loan_pd*loan_ead*loan_lgd
+portfolio_el = loan_el.sum()
+exposure_weight = loan_ead/loan_ead.sum()
+weighted_pd = np.sum(exposure_weight*loan_pd)
+portfolio_el_check = weighted_pd*.4*loan_ead.sum()
+assert np.isclose(portfolio_el,portfolio_el_check)
+display(pd.DataFrame({'PD':loan_pd,'Exposure ($)':loan_ead,'LGD':loan_lgd,
+                      'Expected loss ($)':loan_el}))
+print('Single-loan expected loss:',expected_loss,'Portfolio expected loss:',portfolio_el)
+values.update(loss_in_default=loss_in_default,expected_loss=expected_loss,
+              loan_el=loan_el,portfolio_el=portfolio_el,weighted_pd=weighted_pd,
+              portfolio_el_check=portfolio_el_check,exposure_weight=exposure_weight)
+```
+
+## Dependence and adverse outcomes
+
+Both portfolios have the same expected loss. Dependence changes how often
+their losses arrive together, which affects dispersion and the loss quantile.
+
+```{python}
+loss_values = np.array([0,5000,10000])
+prob_independent = np.array([.81,.18,.01])
+prob_together = np.array([.90,0,.10])
+display(pd.DataFrame({'Loss ($)':loss_values,'Independent':prob_independent,
+                      'Always together':prob_together}))
+fig, axes = plt.subplots(1,2,figsize=(9,4),sharey=True)
+for ax,title,p in zip(axes,['Independent','Always together'],[prob_independent,prob_together]):
+    ax.bar(range(3),p,color=BLUE,width=.6)
+    ax.set(xticks=range(3),xticklabels=['$0','$5,000','$10,000'],ylim=(0,1.05),title=title,
+           xlabel='Portfolio loss')
+    ax.yaxis.set_major_formatter(PercentFormatter(1))
+    for j,v in enumerate(p): ax.text(j,v+.025,f'{v:.0%}',ha='center')
+axes[0].set_ylabel('Probability')
+fig.tight_layout()
+show_figure(out,'foundations-loss',fig)
+mean_independent = np.sum(loss_values*prob_independent)
+mean_together = np.sum(loss_values*prob_together)
+sd_independent = np.sqrt(np.sum(prob_independent*(loss_values-mean_independent)**2))
+sd_together = np.sqrt(np.sum(prob_together*(loss_values-mean_together)**2))
+cdf_independent, cdf_together = np.cumsum(prob_independent),np.cumsum(prob_together)
+q95_independent = loss_values[np.flatnonzero(cdf_independent>=.95)[0]]
+q95_together = loss_values[np.flatnonzero(cdf_together>=.95)[0]]
+display(pd.DataFrame({'Case':['Independent','Always together'],
+                      'Mean loss ($)':[mean_independent,mean_together],
+                      'Loss SD ($)':[sd_independent,sd_together],
+                      '95% loss quantile ($)':[q95_independent,q95_together]}))
+values.update(mean_independent=mean_independent,mean_together=mean_together,
+              sd_independent=sd_independent,sd_together=sd_together,
+              cdf_independent=cdf_independent,cdf_together=cdf_together,
+              q95_independent=q95_independent,q95_together=q95_together)
+```
+
+## Scores, logarithms and probabilities
+
+```{python}
+normal_pd = .08
+normal_threshold = norm.ppf(normal_pd)
+normal_check = norm.cdf(normal_threshold)
+central_probability = norm.cdf(1)-norm.cdf(-1)
+z = np.linspace(-3.5,3.5,701)
+tail = np.linspace(-3.5,normal_threshold,300)
+fig,ax = plt.subplots()
+ax.plot(z,norm.pdf(z),color=BLUE)
+ax.fill_between(tail,norm.pdf(tail),color=RED,alpha=.65)
+ax.axvline(normal_threshold,color=RED,ls=':',lw=.8)
+ax.text(-2.6,.25,'Left-tail probability\n8%',ha='center')
+ax.set(xlabel='Standardized score',ylabel='Density',ylim=(0,.44))
+show_figure(out,'foundations-normal',fig)
+probability = .08
+odds = probability/(1-probability)
+score = np.log(odds)
+probability_check = expit(score)
+display(pd.Series({'Normal threshold':normal_threshold,'Recovered normal PD':normal_check,
+                   'Log odds':score,'Recovered logistic PD':probability_check}))
+values.update(normal_threshold=normal_threshold,normal_check=normal_check,
+              central_probability=central_probability,odds=odds,score=score,
+              probability_check=probability_check)
+```
+
+## Time, interest and present value
+
+```{python}
+annual_rate, initial_amount, years = .05,1000,2
+future_amount = initial_amount*(1+annual_rate)**years
+present_value_check = future_amount/(1+annual_rate)**years
+payment_time = np.array([1,2])
+cash_flow = np.array([50,1050])
+discount_factor = (1+annual_rate)**(-payment_time)
+payment_pv = cash_flow*discount_factor
+continuous_rate = np.log1p(annual_rate)
+discount_discrete = (1+annual_rate)**(-years)
+discount_exponential = np.exp(-continuous_rate*years)
+assert np.isclose(discount_discrete,discount_exponential)
+display(pd.DataFrame({'Year':payment_time,'Cash flow ($)':cash_flow,
+                      'Discount factor':discount_factor,'Present value ($)':payment_pv}))
+print('Bond present value:',payment_pv.sum())
+values.update(future_amount=future_amount,present_value_check=present_value_check,
+              discount_factor=discount_factor,payment_pv=payment_pv,continuous_rate=continuous_rate,
+              discount_discrete=discount_discrete,discount_exponential=discount_exponential)
+```
+
+## Sampling uncertainty and scenarios
+
+```{python}
+estimated_pd = .08
+sample_sizes = np.array([100,10000])
+standard_errors = np.sqrt(estimated_pd*(1-estimated_pd)/sample_sizes)
+scenario_pd = np.array([.08,.12])
+scenario_el = scenario_pd*10000*.60
+display(pd.DataFrame({'Sample size':sample_sizes,'PD standard error (pp)':100*standard_errors}))
+display(pd.DataFrame({'Scenario':['Baseline','Stress'],'Expected loss ($)':scenario_el}))
+print('Additional expected loss ($):',scenario_el[1]-scenario_el[0])
+values.update(standard_errors=standard_errors,scenario_el=scenario_el)
+finish(out,values)
+```
+
+The next chapter applies these distinctions to lending decisions. It estimates
+individual probabilities, translates them into accept/reject decisions and
+checks the resulting default rates and financial payoffs on a held-out sample.
