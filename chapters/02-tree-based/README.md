@@ -5,7 +5,7 @@ From the project root: `python run.py 02-tree-based`.
 Open [chapter.qmd](chapter.qmd) to read or edit the calculations.
 Execute in source order. [Results](../../README.md#results) are created locally.
 
-**Restricted data required.** Supply the authorized RDS and frozen split manifest locally; both are excluded from distribution. No R session is required.
+**Frozen data included.** The complete private checkout supplies the RDS and reference split, with a source and modification notice. No R session is required.
 
 ## Find code by book result
 

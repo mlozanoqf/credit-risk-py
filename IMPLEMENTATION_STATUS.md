@@ -1,5 +1,12 @@
 # Implementation Status
 
+## Private scoring-input update: 15 October 2026
+
+The complete frozen scoring RDS and reference split are now included in this
+private repository, with a [provenance note](data/credit-scoring/PROVENANCE.md).
+This supersedes the historical input exclusions below. Public redistribution
+remains under review; no source-data license is inferred from the code license.
+
 Scope approved on 14 October 2026: Foundations and all six chapters, in a
 separate local project, before public release. Reference: credit-risk-r commit
 24a5616326e2f6759c0e793c7d0f5ec1728dc99b. The R project remains unchanged.
@@ -7,7 +14,7 @@ separate local project, before public release. Reference: credit-risk-r commit
 | Unit | Status | Next check |
 |---|---|---|
 | Foundations | Implemented; validated | Author review of Python report |
-| 1. Logistic credit scoring | Implemented; validated | Author review; restricted inputs remain local |
+| 1. Logistic credit scoring | Implemented; validated | Author review; complete inputs in private checkout |
 | 2. Tree-based credit scoring | Implemented; validated adaptation | Author review of the material tree differences and XGBoost comparison |
 | 3. Merton | Implemented; pilot validated | Author review of rendered report; see VALIDATION.md |
 | 4. Credit Spreads and CDS Valuation | Implemented; validated | Author review of report and relative-value comparison |
@@ -25,7 +32,7 @@ planned units already work.
 Foundations and Chapters 1-2 were completed next. See SCORING_VALIDATION.md
 for the comparison, including 16 versus 5 leaves in the Python/R simple trees.
 The user explicitly approved the scikit-learn CART adaptation. Both scoring
-chapters retain the exact R split membership and order in a restricted local
+chapters retain the exact R split membership and order in the supplied
 manifest, and run without an R runtime. Chapters 4-6 were subsequently completed
 with 90 additional numbered results, financial tests and R comparisons. See
 PORTFOLIO_VALIDATION.md.

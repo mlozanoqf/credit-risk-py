@@ -9,6 +9,9 @@
 **/*.ipynb
 /data/credit-scoring/*
 !/data/credit-scoring/README.md
+!/data/credit-scoring/PROVENANCE.md
+!/data/credit-scoring/credit_scoring.rds
+!/data/credit-scoring/reference-split.csv
 *.pdf
 *.zip
 .env

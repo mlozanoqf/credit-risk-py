@@ -1,0 +1,3 @@
+# Keep frozen inputs byte-identical across checkout platforms.
+/data/credit-scoring/credit_scoring.rds -text
+/data/credit-scoring/reference-split.csv -text whitespace=cr-at-eol

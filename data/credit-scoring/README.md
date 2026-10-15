@@ -2,9 +2,9 @@
 
 ## Availability
 
-The loan dataset remains excluded from Git and distribution pending permission.
-Chapters 1 and 2 require an authorized local copy of `credit_scoring.rds`
-and its `reference-split.csv` in this directory. Both are ignored by Git.
+This private repository includes the complete frozen `credit_scoring.rds`
+and its `reference-split.csv`. See the [provenance note](PROVENANCE.md) for
+the DataCamp source, modifications and current access and rights status.
 The split manifest lists original file rows in their reference training/test
 order. It fixes the comparison sample without requiring an R installation.
 Python checks the dataset checksum and verifies complete, disjoint membership
@@ -41,4 +41,4 @@ The outcome column is excluded from the design matrix. Category baselines are
 A, MORTGAGE, 0 and E, following the R factor levels.
 
 This dictionary and the code license do not grant redistribution rights over
-the dataset. Permission remains pending; no download workaround is provided.
+the dataset. Future public redistribution remains a separate release review.

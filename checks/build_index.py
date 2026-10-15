@@ -19,7 +19,7 @@ def main():
             intro += ('Planned Python implementation. The R companion is the reference.\n'
                       'This chapter is not yet executable in Python.\n')
             if chapter['id'] in ('01-logistic', '02-tree-based'):
-                intro += '\nThe credit-scoring dataset is excluded pending redistribution permission.\n'
+                intro += '\nSee the scoring data provenance and availability note.\n'
             (folder / 'README.md').write_text(intro, encoding='utf-8')
             continue
         intro += (f"From the project root: `python run.py {chapter['id']}`.\n\n"
@@ -28,8 +28,8 @@ def main():
                   '## Find code by book result\n\n| Result | Title | Code |\n|---|---|---|\n')
         if chapter['id'] in ('01-logistic','02-tree-based'):
             intro = intro.replace('## Find code by book result',
-                '**Restricted data required.** Supply the authorized RDS and frozen split manifest locally; '
-                'both are excluded from distribution. No R session is required.\n\n## Find code by book result')
+                '**Frozen data included.** The complete private checkout supplies the RDS and reference split, '
+                'with a source and modification notice. No R session is required.\n\n## Find code by book result')
         lines = (ROOT / chapter['source']).read_text(encoding='utf-8').splitlines()
         for row in [r for r in reference if r['chapter'] == chapter['id']]:
             marker = '{#' + row['anchor'] + '}'

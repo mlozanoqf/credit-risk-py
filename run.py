@@ -25,7 +25,7 @@ def main():
         if missing:
             parser.error('Chapters 1-2 require authorized local inputs: '
                          + ', '.join(missing)
-                         + '. These files are excluded pending redistribution permission. '
+                         + '. These files are supplied in the complete private checkout. '
                          'See data/credit-scoring/README.md. No data will be downloaded.')
     quarto = shutil.which('quarto')
     if not quarto:

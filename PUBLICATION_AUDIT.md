@@ -1,5 +1,32 @@
 # Clean Installation and Publication Audit
 
+## Current private distribution: 15 October 2026
+
+The author authorized inclusion of the complete frozen scoring dataset and
+reference split in this private repository, with source attribution and a
+description of the modifications. See [provenance](data/credit-scoring/PROVENANCE.md).
+The original clean-install record below is historical. Public redistribution
+remains a separate review; repository visibility is unchanged.
+
+The technical audit accepts only the two approved scoring inputs when run with
+`--private-scoring-inputs`, verifies their hashes and continues to reject private
+authoring materials, models and generated outputs. This option is not a rights
+clearance or an instruction to change repository visibility.
+
+The scoring rerun uses the existing recorded Windows environment. Both
+chapters execute independently and reproduce byte-identical numeric JSON
+snapshots. All 37 tests pass, including the six scoring-model tests; none are
+skipped. Output checks verify 81 numbered results, 32 nonblank figures, code
+links and report anchors. The freshly exported R split matches the supplied
+manifest exactly.
+
+The maintainer comparison with `--scoring-only` passes 77 deterministic groups
+covering 670,292 values. Logistic predictions agree with R to about 3.6e-12.
+The documented CART and XGBoost differences remain unchanged. Foundations
+has separate, pre-existing local changes and is outside this scoring release
+comparison; the generic combined comparison needs its Foundations mapping
+updated before its next use. This is not a new clean package installation.
+
 Audit date: 14 October 2026. Status: **clean Windows execution passed; public
 release authorized by the author with credit-scoring inputs excluded and the
 iShares extract retained. iShares redistribution rights remain unconfirmed**.

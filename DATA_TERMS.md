@@ -6,12 +6,14 @@ from permission to redistribute; it is not a legal opinion.
 
 ## Credit-scoring data
 
-`credit_scoring.rds`, `reference-split.csv`, individual predictions, trained
-models and rendered scoring outputs are excluded from the publication candidate.
-Permission for the underlying loan data remains pending. Chapters 1-2 explain
-the required inputs and stop before rendering when those inputs are absent.
-The data dictionary and checksum identify the intended dataset without supplying
-its observations. No alternative download or reconstruction is provided.
+On 15 October 2026 the author authorized inclusion of `credit_scoring.rds`
+and `reference-split.csv` in the private repository following editorial advice
+to cite the source and explain the alterations. The complete frozen inputs
+are now supplied; individual predictions, trained models and rendered outputs
+remain generated locally. The [provenance note](data/credit-scoring/PROVENANCE.md)
+documents the DataCamp source and semi-synthetic modifications. Editorial advice
+is not recorded as a license from DataCamp. Confirmation of the arrangements
+for future public redistribution remains a separate release item.
 
 ## Corporate-bond observations
 

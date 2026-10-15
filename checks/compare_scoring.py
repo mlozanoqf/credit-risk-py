@@ -1,5 +1,6 @@
 """Compare Python computations against explicitly exported, local R references."""
 from pathlib import Path
+import argparse
 import json
 import sys
 import numpy as np
@@ -14,6 +15,10 @@ def read(path): return json.loads((ROOT/path).read_text(encoding='utf-8-sig'))
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--scoring-only', action='store_true',
+                        help='Compare Chapters 1-2 without the separate Foundations reference.')
+    args = parser.parse_args()
     results=[]
     def exact(name,a,b,atol=1e-7,rtol=1e-7):
         a,b=np.asarray(a,float),np.asarray(b,float)
@@ -22,9 +27,10 @@ def main():
         results.append({'Comparison':name,'Values':a.size,'Max absolute difference':float(np.nanmax(np.abs(a-b))),
                         'Tolerance met':ok})
         assert ok,(name,results[-1])
-    r0=read('.local/00-foundations.json')
-    p0=read('output/00-foundations/numeric-results.json')
-    for key,v in p0.items(): exact('Foundations: '+key,v,r0[key],atol=1e-12,rtol=1e-12)
+    if not args.scoring_only:
+        r0=read('.local/00-foundations.json')
+        p0=read('output/00-foundations/numeric-results.json')
+        for key,v in p0.items(): exact('Foundations: '+key,v,r0[key],atol=1e-12,rtol=1e-12)
     r=read('.local/scoring-reference.json')
     r1=read('.local/01-logistic.json')
     r2=read('.local/02-tree-based.json')

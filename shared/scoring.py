@@ -14,7 +14,7 @@ DATA_MD5 = '1fbea5f14ec0c0174a946e010540b02f'
 def load_data():
     path = Path('data/credit-scoring/credit_scoring.rds')
     if not path.is_file():
-        raise FileNotFoundError('Restricted credit-scoring data are required. See data/credit-scoring/README.md.')
+        raise FileNotFoundError('The frozen credit-scoring input is missing from this checkout. See data/credit-scoring/README.md.')
     if hashlib.md5(path.read_bytes()).hexdigest() != DATA_MD5:
         raise ValueError('This frozen split requires the reference dataset; checksum mismatch.')
     raw = rdata.read_rds(path)

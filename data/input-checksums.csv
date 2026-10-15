@@ -3,5 +3,6 @@ data/climate/ngfs_climacred_daps_raw.csv,06cd3f5e52779ebdcc3f98e494ed501a
 data/climate/ngfs_climacred_download_manifest.csv,e3408cd5dcab03f8f406d53cadf51ba3
 data/climate/ngfs_climacred_global_raw.csv,9e55e9f0e1b571d5bd396fc3e9811d9e
 data/credit-scoring/credit_scoring.rds,1fbea5f14ec0c0174a946e010540b02f
+data/credit-scoring/reference-split.csv,1182a6d262ffa3d37dbb01a35316748f
 data/credit-spreads/corporate-bond-snapshot.csv,056653b1fd5e1b66cb4a8ef43f24c4fd
 data/credit-spreads/corporate-treasury-curve.csv,13eca7791b4e3589b06a8c29292f0851

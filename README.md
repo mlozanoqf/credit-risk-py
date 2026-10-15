@@ -7,10 +7,11 @@ local HTML reports; it does not build the publisher PDF.
 
 **Pre-publication access:** this repository is private while the book is being
 prepared. Public access is planned for the book's publication, at the same URL.
-The credit-scoring data remain excluded pending redistribution permission.
+The complete frozen credit-scoring data and reference split are included for
+authorized repository users. Future public redistribution remains under review.
 
 Foundations and Chapters 1-6 are implemented. The credit-scoring inputs for
-Chapters 1-2 are excluded pending permission. Third-party data retain their
+Chapters 1-2 are supplied with a provenance and modification notice. Third-party data retain their
 source conditions, and iShares redistribution permission remains unconfirmed; see
 [data terms](DATA_TERMS.md) and [release audit](PUBLICATION_AUDIT.md).
 Consult [implementation status](IMPLEMENTATION_STATUS.md), [Merton validation](VALIDATION.md),
@@ -46,8 +47,7 @@ Each can run independently; Chapters 1-2 require the authorized dataset
 and its frozen split manifest. The simple Python tree is an explicitly documented
 scikit-learn adaptation of the R tree, with different leaves and predictions.
 Without those two input files, Chapters 1-2 stop with a data-availability message.
-Their full empirical results cannot currently be reproduced from the public
-repository alone. Foundations and Chapters 3-6 run using the included frozen
+The complete private checkout supplies both files. Foundations and Chapters 3-6 run using the included frozen
 inputs, subject to the source conditions described below.
 
 Each chapter starts a fresh Python process through Quarto/Jupyter. To read or
@@ -87,9 +87,10 @@ substituting a financial method requires a separate decision.
 
 ## Data availability
 
-The credit-scoring data for Chapters 1-2 remain excluded from Git and distribution
-pending permission. An authorized local copy may be used for development and
-validation. Changing programming language does not change those restrictions.
+The complete scoring dataset for Chapters 1-2 is included in the private
+repository. Its [provenance note](data/credit-scoring/PROVENANCE.md) documents
+the original course, the modifications and the pending public-release review.
+The Python implementation uses the same RDS as the book and R companion.
 Other frozen inputs retain their original source notes and conditions.
 The author has chosen to include the limited iShares and NGFS extracts.
 NGFS extracts carry the required source notices. Written iShares redistribution
@@ -119,8 +120,8 @@ absent. Generic classification and policy tests still run. With authorized
 inputs and all chapters rendered, omit `--chapters` to check every output.
 The scripts named `compare_*`, `diagnose_*`, `export_*` and `scoring_probe.py`
 are maintainer diagnostics requiring separate local R references; they are
-not part of the reader's execution workflow. `audit_release.py` audits the
-first-publication Git candidate and writes its file hashes under ignored `.local/`.
+not part of the reader's execution workflow. `audit_release.py --private-scoring-inputs`
+audits the private Git candidate and writes its file hashes under ignored `.local/`.
 
 ## License
 
