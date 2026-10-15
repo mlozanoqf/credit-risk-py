@@ -5,6 +5,10 @@ Martin Lozano. The book and its [R companion](https://github.com/mlozanoqf/credi
 remain the reference. This project produces calculations, tables, figures and
 local HTML reports; it does not build the publisher PDF.
 
+**Pre-publication access:** this repository is private while the book is being
+prepared. Public access is planned for the book's publication, at the same URL.
+The credit-scoring data remain excluded pending redistribution permission.
+
 Foundations and Chapters 1-6 are implemented. The credit-scoring inputs for
 Chapters 1-2 are excluded pending permission. Third-party data retain their
 source conditions, and iShares redistribution permission remains unconfirmed; see

@@ -5,6 +5,12 @@ release authorized by the author with credit-scoring inputs excluded and the
 iShares extract retained. iShares redistribution rights remain unconfirmed**.
 The clean-install audit preceded the initial commit and public release.
 
+The initial release was pushed as commit `900000b`. The author subsequently
+requested private access for both companions until the book is published.
+Both GitHub repositories were switched to private on 14 October 2026; their
+URLs and local folders are unchanged. This supersedes the earlier public-access
+status, without changing input exclusions or the unresolved source-rights issue.
+
 ## Clean installation
 
 A temporary copy was assembled from the files Git would include, without the
