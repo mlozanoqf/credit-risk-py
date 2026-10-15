@@ -23,9 +23,9 @@ def main():
         missing = [name for name in required
                    if not (root / 'data' / 'credit-scoring' / name).is_file()]
         if missing:
-            parser.error('Chapters 1-2 require authorized local inputs: '
+            parser.error('Chapters 1-2 require the supplied input files: '
                          + ', '.join(missing)
-                         + '. These files are supplied in the complete private checkout. '
+                         + '. These files are supplied in the complete repository checkout. '
                          'See data/credit-scoring/README.md. No data will be downloaded.')
     quarto = shutil.which('quarto')
     if not quarto:

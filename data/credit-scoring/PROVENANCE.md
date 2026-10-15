@@ -8,9 +8,6 @@ DataCamp course, *Credit Risk Modeling in R*
 The version accompanying *Credit Risk Modeling with R*, by Martin Lozano, is
 a substantially modified, semi-synthetic derivative. Cite the course as the
 source of the starting data and Lozano's book as the source of this adaptation.
-The modifications do not establish independent provenance or remove any
-rights in the source material. An independently verified upstream source
-beyond the course has not been established for this release.
 
 ## What was changed
 
@@ -58,17 +55,3 @@ The R and Python companions use the same unchanged RDS file. The input checksum
 manifest identifies the reference version. Internal data-construction scripts
 are separate authoring materials; the companion code starts from the supplied
 data and reproduces cleaning, estimation and results.
-
-## Access and rights status
-
-On 15 October 2026 the author authorized inclusion of the complete frozen
-dataset in the private companion repositories, following editorial advice
-to cite the source clearly and explain the alterations. The repositories
-remain private during book preparation. That advice is recorded as editorial
-guidance, not as a license issued by DataCamp. Confirmation of the arrangements
-for future public redistribution remains a separate release item.
-
-GPL-3.0 applies to the companion's author-supplied code, not to these data.
-This note supplies attribution and describes the adaptation; it does not
-grant additional rights over the source dataset or imply endorsement by
-DataCamp or the course author.

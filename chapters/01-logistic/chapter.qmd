@@ -14,7 +14,7 @@ execute:
 ---
 
 This companion reproduces the chapter's financial calculations in Python.
-The authorized dataset and frozen split manifest must be supplied locally.
+The dataset and frozen split manifest are supplied in the repository.
 The manifest preserves R's training/test membership and row order. A seed
 alone would produce a different split in NumPy. R is not needed at runtime.
 

@@ -2,9 +2,9 @@
 
 ## Availability
 
-This private repository includes the complete frozen `credit_scoring.rds`
+The repository includes the complete frozen `credit_scoring.rds`
 and its `reference-split.csv`. See the [provenance note](PROVENANCE.md) for
-the DataCamp source, modifications and current access and rights status.
+the DataCamp source and modifications.
 The split manifest lists original file rows in their reference training/test
 order. It fixes the comparison sample without requiring an R installation.
 Python checks the dataset checksum and verifies complete, disjoint membership
@@ -39,6 +39,3 @@ Original file rows identify positions within this frozen file. Human-facing
 test positions are one-based; Python `.iloc` positions are zero-based.
 The outcome column is excluded from the design matrix. Category baselines are
 A, MORTGAGE, 0 and E, following the R factor levels.
-
-This dictionary and the code license do not grant redistribution rights over
-the dataset. Future public redistribution remains a separate release review.

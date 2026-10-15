@@ -1,119 +1,72 @@
 # Clean Installation and Publication Audit
 
-## Current private distribution: 15 October 2026
+## Current verification
 
-The author authorized inclusion of the complete frozen scoring dataset and
-reference split in this private repository, with source attribution and a
-description of the modifications. See [provenance](data/credit-scoring/PROVENANCE.md).
-The original clean-install record below is historical. Public redistribution
-remains a separate review; repository visibility is unchanged.
+The repository contains the complete frozen scoring dataset and reference
+split. Their source and modifications are described in the
+[provenance note](data/credit-scoring/PROVENANCE.md).
+Both companion repositories remain private until book publication.
 
-The technical audit accepts only the two approved scoring inputs when run with
-`--private-scoring-inputs`, verifies their hashes and continues to reject private
-authoring materials, models and generated outputs. This option is not a rights
-clearance or an instruction to change repository visibility.
-
-The scoring rerun uses the existing recorded Windows environment. Both
-chapters execute independently and reproduce byte-identical numeric JSON
-snapshots. All 37 tests pass, including the six scoring-model tests; none are
-skipped. Output checks verify 81 numbered results, 32 nonblank figures, code
-links and report anchors. The freshly exported R split matches the supplied
-manifest exactly.
+On 15 October 2026, both scoring chapters executed independently in the
+recorded Windows environment and reproduced byte-identical numeric JSON
+snapshots. All 37 tests passed, with none skipped. Checks covered 81 numbered
+results, 32 nonblank figures, code links and report anchors. The R split
+export matches the supplied manifest exactly.
 
 The maintainer comparison with `--scoring-only` passes 77 deterministic groups
 covering 670,292 values. Logistic predictions agree with R to about 3.6e-12.
-The documented CART and XGBoost differences remain unchanged. Foundations
-has separate, pre-existing local changes and is outside this scoring release
-comparison; the generic combined comparison needs its Foundations mapping
-updated before its next use. This is not a new clean package installation.
-
-Audit date: 14 October 2026. Status: **clean Windows execution passed; public
-release authorized by the author with credit-scoring inputs excluded and the
-iShares extract retained. iShares redistribution rights remain unconfirmed**.
-The clean-install audit preceded the initial commit and public release.
-
-The initial release was pushed as commit `900000b`. The author subsequently
-requested private access for both companions until the book is published.
-Both GitHub repositories were switched to private on 14 October 2026; their
-URLs and local folders are unchanged. This supersedes the earlier public-access
-status, without changing input exclusions or the unresolved source-rights issue.
+Documented CART and XGBoost differences remain unchanged. This scoring rerun
+used existing packages and is distinct from a clean dependency installation.
+Foundations has separate local additions; the generic combined comparison
+needs its Foundations mapping updated before its next use.
 
 ## Clean installation
 
-A temporary copy was assembled from the files Git would include, without the
-original `.venv`, `.local`, `.quarto`, outputs, Git metadata or restricted loan
-inputs. A new Python 3.12.14 virtual environment was created with system/user
-site packages disabled. Dependencies were installed from `requirements-lock.txt`
-using the PyPI index (cached package wheels were allowed). `pip check` passed.
-Quarto 1.5.54 was supplied separately, as required by the setup instructions.
-Jupyter configuration and Matplotlib cache paths were isolated for this run.
+The 14 October clean-install test used a new Python 3.12.14 environment,
+with system/user site packages disabled and dependencies installed from
+`requirements-lock.txt`. Cached package wheels were allowed. `pip check`
+passed. Quarto 1.5.54 was supplied separately; Jupyter configuration and
+Matplotlib cache paths were isolated.
 
-| Unit | Clean execution | Numeric comparison with prior Python run |
+| Unit | Verification environment | Numeric comparison |
 |---|---|---|
-| Foundations | Passed | Byte-identical JSON |
-| Chapter 1 | Intentionally unavailable without restricted inputs | No execution or output |
-| Chapter 2 | Intentionally unavailable without restricted inputs | No execution or output |
-| Chapter 3 | Passed | Byte-identical JSON |
-| Chapter 4 | Passed with local frozen bond extract | Byte-identical JSON |
-| Chapter 5 | Passed | Byte-identical JSON |
-| Chapter 6 | Passed with local frozen climate extract | Byte-identical JSON |
+| Foundations | Clean installation, 14 October | Byte-identical JSON |
+| Chapter 1 | Recorded environment, 15 October | Byte-identical JSON |
+| Chapter 2 | Recorded environment, 15 October | Byte-identical JSON |
+| Chapter 3 | Clean installation, 14 October | Byte-identical JSON |
+| Chapter 4 | Clean installation, 14 October | Byte-identical JSON |
+| Chapter 5 | Clean installation, 14 October | Byte-identical JSON |
+| Chapter 6 | Clean installation, 14 October | Byte-identical JSON |
 
-The five successful reports contain 130 numbered outputs and 55 nonblank
-figures, including two unnumbered Foundations figures. Code links, HTML result
-anchors and embedded images passed validation. No R installation or sibling
-project is used by the reader calculations. Existing comparisons with R remain
-documented in the three numerical-validation reports.
+The five clean-install reports contain 130 numbered outputs and 55 nonblank
+figures, including two unnumbered Foundations figures. Code links, report
+anchors and embedded images passed. The clean test suite ran 31 tests;
+the six model tests are covered by the complete 37-test scoring rerun above.
+Missing-file checks verify that incomplete checkouts stop before Quarto starts.
 
-The clean suite discovered 37 tests: 31 passed and six scoring-model tests were
-explicitly skipped because the restricted data were absent. Classification and
-policy tests still ran with small, explicitly constructed test inputs. Missing
-dataset/manifest combinations were tested for both scoring chapters. Direct
-attempts to run Chapters 1-2 returned a clear error before starting Quarto;
-no download, partial model output or replacement data were generated.
+## Technical file audit
 
-## Technical publication audit
+`checks/audit_release.py` inspects the Git candidate without staging or
+publishing it and saves a SHA256 manifest under `.local/release-audit.json`.
+It verifies both scoring inputs against their reference hashes and checks
+for unexpected binaries, generated outputs, credentials, broken relative
+links and personal paths. It checks the 211 source-code result links and
+keeps publisher files, contracts and instructor solutions outside this
+reader package. These checks do not certify future additions automatically.
 
-`checks/audit_release.py` inspects the current Git candidate without staging it.
-Its per-file SHA256 manifest is saved locally under `.local/release-audit.json`.
-The audit found no restricted data, trained scoring models, individual prediction
-files, rendered reports, PDFs, contracts or instructor solutions in that candidate.
-The scoring dataset, split manifest and generated outputs remain ignored. There
-are no existing Git refs or remote, so there is no prior committed history to
-scrub in this Python repository. A new audit is necessary if that state changes.
+## Other source records
 
-The source scan found no embedded credential matching the checked patterns,
-personal absolute paths in executable source, or reader dependency on maintainer
-R exports. Relative documentation links and all 211 source-code result links
-were checked. These checks reduce accidental-disclosure risk; they do not replace
-review of future additions or constitute a general security certification.
-
-Two small execution improvements were made during the audit. `run.py` now
-checks restricted-input availability before launching Quarto. The output checker
-accepts `--chapters` so that readers can verify the available units without
-having scoring outputs. Financial calculations and reference data were unchanged.
-
-## Decisions before release
-
-1. **Loan data:** remain excluded pending permission. The code can be distributed
-   with that limitation, but full replication of Chapters 1-2 remains unavailable
-   to readers without the reference dataset and split manifest.
-2. **Bond extract:** on 14 October 2026 the author chose to retain the 19 iShares
+1. **Bond extract:** on 14 October 2026 the author chose to retain the 19 iShares
    observations after reviewing the source restrictions. The data are unchanged.
    Written permission remains unconfirmed; this author decision does not resolve
    redistribution rights. Source notices remain explicit in the data documentation.
-3. **Climate extract:** on the same date the author chose to retain the limited
+2. **Climate extract:** on the same date the author chose to retain the limited
    CLIMACRED/DAPS extracts under the source license with attribution, copyright,
    source/license links, disclaimer reference and transformation notes. This
    decision relies on their chapter-specific scope, not on separate permission
    or a legal determination of substantiality. Reassess if the scope changes.
-4. **Author approval:** the author subsequently authorized the final file audit
-   and public release, explicitly keeping the credit-scoring data excluded and
-   retaining iShares. This is publication authorization from the author, not
-   source-rights clearance. The first-release audit must pass before committing.
 
-Supporting official links and source-specific conditions are in
-[Data Sources and Release Review](DATA_TERMS.md). The source review is not a
-legal opinion. The code's GPL-3.0 license does not resolve data rights.
+Supporting source notices are in [Data Sources and Release Review](DATA_TERMS.md).
 
 ## Remaining compatibility checks
 

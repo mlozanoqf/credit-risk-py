@@ -76,6 +76,19 @@ values.update(change_pp=change_pp,relative_change=relative_change,change_bps=cha
 The second-year denominator contains the 92 survivors. The cumulative
 probability counts both years' defaults relative to the original 100 borrowers.
 
+### Learning a default probability from borrower information
+
+Apply the estimated segment frequencies to new applicants whose segment is
+known but whose repayment outcome is still unknown.
+
+```{python}
+new_applicant_segment = np.array(['A', 'B', 'B'])
+segment_pd_by_name = dict(zip(['A', 'B'], segment_pd))
+new_applicant_pd = np.array([segment_pd_by_name[s] for s in new_applicant_segment])
+display(new_applicant_pd)
+values['new_applicant_pd'] = new_applicant_pd
+```
+
 ## Expected dollar losses
 
 ```{python}
@@ -138,6 +151,42 @@ values.update(mean_independent=mean_independent,mean_together=mean_together,
               q95_independent=q95_independent,q95_together=q95_together)
 ```
 
+### Simulating the same two-loan portfolio
+
+Each position represents a scenario for the same two borrowers. Separate draws
+implement independence; sharing one default outcome implements the
+always-together case. Both models use the same supplied 10% marginal PD.
+NumPy and R generate different draws with the same seed. Compare their
+simulation results with the common analytical benchmarks, allowing for Monte
+Carlo variability, rather than expecting identical scenario outcomes.
+
+```{python}
+rng = np.random.default_rng(20261014)
+n_scenarios = 10000
+draw_1 = rng.uniform(size=n_scenarios)
+draw_2 = rng.uniform(size=n_scenarios)
+default_1 = draw_1 < .10
+default_2 = draw_2 < .10
+# Explicit integer conversion counts two defaults as 2 rather than Boolean OR.
+sim_loss_independent = 5000 * (default_1.astype(int) + default_2.astype(int))
+sim_loss_together = 10000 * default_1.astype(int)
+simulation_example = np.flatnonzero(default_1 & default_2)[0]
+display(pd.Series({'Scenario (one-based)':simulation_example + 1,
+                   'Draw 1':draw_1[simulation_example],
+                   'Draw 2':draw_2[simulation_example],
+                   'Loss ($)':sim_loss_independent[simulation_example]}))
+simulation_check = pd.DataFrame({
+    'Dependence':['Independent', 'Always together'],
+    'Exact mean ($)':[mean_independent, mean_together],
+    'Simulated mean ($)':[sim_loss_independent.mean(), sim_loss_together.mean()],
+    'Exact joint PD':[.10**2, .10],
+    'Simulated joint PD':[(default_1 & default_2).mean(), default_1.mean()]
+})
+display(simulation_check)
+values.update(simulated_mean_loss=simulation_check['Simulated mean ($)'].to_numpy(),
+              simulated_joint_pd=simulation_check['Simulated joint PD'].to_numpy())
+```
+
 ## Scores, logarithms and probabilities
 
 ```{python}
@@ -187,6 +236,52 @@ values.update(future_amount=future_amount,present_value_check=present_value_chec
               discount_discrete=discount_discrete,discount_exponential=discount_exponential)
 ```
 
+### A default probability implied by a bond price
+
+For the constructed one-year bond example, assume an observed price of
+exactly 94/1.05, a promised payment of 100 and recovery of 40 at maturity.
+The calibrated q is a risk-neutral pricing weight, not an estimate of the
+real-world default frequency. Keep full precision for every calculation.
+
+```{python}
+bond_face = 100
+bond_recovery = 40
+bond_rf = .05
+bond_price = 94 / (1 + bond_rf)
+bond_q = (bond_face - bond_price * (1 + bond_rf)) / (bond_face - bond_recovery)
+bond_expected_payment = (1 - bond_q) * bond_face + bond_q * bond_recovery
+bond_repriced = bond_expected_payment / (1 + bond_rf)
+display(pd.Series({'Price': bond_price, 'Default probability': bond_q,
+                   'Expected payment': bond_expected_payment,
+                   'Repriced bond': bond_repriced}).round(4))
+values.update(bond_face=bond_face, bond_recovery=bond_recovery, bond_rf=bond_rf,
+              bond_price=bond_price, bond_q=bond_q,
+              bond_expected_payment=bond_expected_payment, bond_repriced=bond_repriced)
+```
+
+Repricing recovers the input by construction. The economic use is to value
+another payoff consistently. Protection on this same bond pays 60 in default
+and zero in full repayment, at maturity and without counterparty risk. The
+bond plus protection pays 100 in both states, so their combined price equals
+the risk-free bond price under frictionless trading and short selling.
+
+```{python}
+bond_risk_free_price = bond_face / (1 + bond_rf)
+protection_payment = bond_face - bond_recovery
+protection_from_prices = bond_risk_free_price - bond_price
+protection_from_q = protection_payment * bond_q / (1 + bond_rf)
+assert np.isclose(bond_repriced, bond_price)
+assert np.isclose(protection_from_prices, protection_from_q)
+display(pd.Series({'Risk-free bond': bond_risk_free_price,
+                   'Risky bond': bond_price,
+                   'Protection from prices': protection_from_prices,
+                   'Protection from q': protection_from_q}).round(4))
+values.update(bond_risk_free_price=bond_risk_free_price,
+              protection_payment=protection_payment,
+              protection_from_prices=protection_from_prices,
+              protection_from_q=protection_from_q)
+```
+
 ## Sampling uncertainty and scenarios
 
 ```{python}
@@ -201,6 +296,10 @@ print('Additional expected loss ($):',scenario_el[1]-scenario_el[0])
 values.update(standard_errors=standard_errors,scenario_el=scenario_el)
 finish(out,values)
 ```
+
+Conditioning a PD on economic conditions specifies a scenario. Its use for
+forecasting or pricing still requires an explicit probability interpretation;
+conditioning alone does not make it risk-neutral.
 
 The next chapter applies these distinctions to lending decisions. It estimates
 individual probabilities, translates them into accept/reject decisions and

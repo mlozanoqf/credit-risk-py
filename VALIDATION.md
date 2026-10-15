@@ -66,7 +66,6 @@ required to execute the Python chapter.
 
 ## Release status
 
-This is a local pilot with no Git remote or publication. Restricted loan data,
-local diagnostics, the virtual environment and generated outputs are ignored
-by Git. Full coverage, a clean-install release check and author approval remain
-required before publication.
+The companion is maintained in a private GitHub repository until publication.
+Local diagnostics, the virtual environment and generated outputs are ignored
+by Git. See PUBLICATION_AUDIT.md for the scope of completed validation.

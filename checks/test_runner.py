@@ -1,4 +1,4 @@
-"""Missing restricted inputs must stop before Quarto or network access."""
+"""Missing required inputs must stop before Quarto or network access."""
 import json
 from pathlib import Path
 import shutil
@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RunnerTests(unittest.TestCase):
-    def test_restricted_chapters_preflight(self):
+    def test_scoring_chapters_preflight(self):
         for chapter in ('01-logistic', '02-tree-based'):
             for present in ((), ('credit_scoring.rds',), ('reference-split.csv',)):
                 with self.subTest(chapter=chapter, present=present), tempfile.TemporaryDirectory() as name:
@@ -26,7 +26,7 @@ class RunnerTests(unittest.TestCase):
                     result = subprocess.run([sys.executable, str(root/'run.py'), chapter],
                                             capture_output=True, text=True, timeout=10)
                     self.assertEqual(result.returncode, 2)
-                    self.assertIn('authorized local inputs', result.stderr)
+                    self.assertIn('the supplied input files', result.stderr)
                     self.assertIn('No data will be downloaded', result.stderr)
                     self.assertNotIn('Traceback', result.stderr)
                     self.assertFalse((root/'output').exists())

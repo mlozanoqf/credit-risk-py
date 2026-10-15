@@ -14,7 +14,7 @@ execute:
 ---
 
 This chapter executes independently, rebuilding the shared cleaning, frozen
-split and logistic benchmark from the authorized data. It asks how alternative
+split and logistic benchmark from the supplied data. It asks how alternative
 models change predicted default risk and lending decisions on the same loans.
 
 **Python adaptation.** The single tree uses scikit-learn CART on treatment-coded

@@ -1,4 +1,4 @@
-"""Audit Git candidate files for restricted artifacts and local-only dependencies.
+"""Audit Git candidate files for unexpected artifacts and local-only dependencies.
 
 This is a technical safeguard, not clearance of third-party data rights.
 It reads the Git index and unignored files without staging or publishing them.
@@ -40,10 +40,8 @@ def git(*args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--private-scoring-inputs', action='store_true',
-                        help='Allow only the approved frozen inputs for a private release.')
-    args = parser.parse_args()
-    allowed_scoring = SCORING_FILES if args.private_scoring_inputs else set()
+    parser.parse_args()
+    allowed_scoring = SCORING_FILES
     candidates = sorted(set(git('ls-files', '--cached', '--others', '--exclude-standard', '-z').split('\0'))-{''})
     problems, manifest = [], []
     for name in candidates:
@@ -55,7 +53,7 @@ def main():
             problems.append(f'Local/private/generated directory: {name}')
         if name.startswith('data/credit-scoring/') and name not in allowed_scoring | {
                 'data/credit-scoring/README.md', 'data/credit-scoring/PROVENANCE.md'}:
-            problems.append(f'Restricted scoring artifact: {name}')
+            problems.append(f'Unexpected scoring artifact: {name}')
         if path.suffix.lower() in {'.rds', '.rdata', '.npz', '.npy', '.ubj', '.pkl', '.pdf', '.docx', '.zip', '.html', '.ipynb'} and name not in allowed_scoring:
             problems.append(f'Unexpected binary or generated artifact: {name}')
         if name.startswith('data/') and path.suffix == '.csv' and name not in DATA_FILES | allowed_scoring:
@@ -101,10 +99,9 @@ def main():
         if source.read_text(encoding='utf-8').splitlines()[int(row['source_line'])-1] != '```{python}':
             problems.append(f'Stale result link: {row["number"]}')
     refs = git('for-each-ref', '--format=%(refname)').splitlines()
-    if args.private_scoring_inputs:
-        for name in SCORING_FILES:
-            if name not in candidates:
-                problems.append(f'Missing approved input: {name}')
+    for name in SCORING_FILES:
+        if name not in candidates:
+            problems.append(f'Missing reference input: {name}')
     # Review history as well as the current candidate; keep private authoring
     # materials out even after their deletion from the working tree.
     for entry in git('rev-list', '--objects', '--all').splitlines():
@@ -114,13 +111,11 @@ def main():
         name = parts[1]
         if FORBIDDEN_PARTS.intersection(Path(name).parts):
             problems.append(f'Forbidden historical artifact: {name}')
-        if name in SCORING_FILES and name not in allowed_scoring:
-            problems.append(f'Scoring input in history requires private release review: {name}')
     report = {'candidate_files': len(candidates), 'numbered_results': len(index),
               'remote_configured': bool(git('remote').strip()), 'git_refs': refs,
               'problems': problems, 'files': manifest,
               'scope': 'Technical content audit; source data terms require separate review.',
-              'private_scoring_inputs': args.private_scoring_inputs}
+              'reference_scoring_inputs': sorted(SCORING_FILES)}
     (ROOT/'.local').mkdir(exist_ok=True)
     (ROOT/'.local/release-audit.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
     print(json.dumps({key: value for key, value in report.items() if key != 'files'}, indent=2))

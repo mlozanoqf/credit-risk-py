@@ -1,4 +1,4 @@
-# Maintainer-only export. Writes restricted validation artifacts outside Git.
+# Maintainer-only export. Writes maintainer validation artifacts outside Git.
 args <- commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==2)
 root <- normalizePath(args[1], mustWork=TRUE)

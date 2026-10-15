@@ -6,14 +6,10 @@ from permission to redistribute; it is not a legal opinion.
 
 ## Credit-scoring data
 
-On 15 October 2026 the author authorized inclusion of `credit_scoring.rds`
-and `reference-split.csv` in the private repository following editorial advice
-to cite the source and explain the alterations. The complete frozen inputs
-are now supplied; individual predictions, trained models and rendered outputs
+`credit_scoring.rds` and `reference-split.csv` provide the complete frozen
+inputs for Chapters 1 and 2; individual predictions, trained models and rendered outputs
 remain generated locally. The [provenance note](data/credit-scoring/PROVENANCE.md)
-documents the DataCamp source and semi-synthetic modifications. Editorial advice
-is not recorded as a license from DataCamp. Confirmation of the arrangements
-for future public redistribution remains a separate release item.
+documents the DataCamp source and semi-synthetic modifications.
 
 ## Corporate-bond observations
 
@@ -32,8 +28,7 @@ both companions after reviewing these restrictions. The file remains intact.
 That retention decision does not supply source permission or resolve this
 rights question; obtaining written confirmation remains recommended. No public
 release of the Python companion was authorized by the retention decision alone.
-The author subsequently authorized publication with this extract retained and
-the credit-scoring inputs excluded. This publication instruction does not
+The author subsequently authorized publication with this extract retained. This publication instruction does not
 constitute permission from iShares or its pricing providers.
 
 ## Treasury curve

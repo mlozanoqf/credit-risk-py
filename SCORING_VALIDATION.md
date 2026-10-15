@@ -135,7 +135,35 @@ Rscript --vanilla checks/export_scoring_reference.R <R-repository> .local
 .venv\Scripts\python.exe checks/compare_scoring.py
 ```
 
-The authorized RDS, split manifest, exported R model, person-level comparisons,
-generated reports and diagnostics remain excluded from Git. Python readers
-need only the authorized input package and the Python environment to execute
-the chapters. Cross-platform installation remains a later release check.
+The repository supplies the RDS and split manifest. Exported R models,
+person-level comparisons, generated reports and diagnostics remain local.
+Readers use the supplied inputs and Python environment to execute the chapters. Cross-platform installation remains a later release check.
+
+## Foundations additions (October 14, 2026)
+
+Added segment-based PD predictions and simulation of the existing independent
+and always-together two-loan portfolios. The previous 44 Python numerical
+results and 72 R numerical objects are unchanged. New applicant probabilities
+are 0.04, 0.12 and 0.12 in both implementations.
+
+At 10,000 scenarios with seed 20261014, Python mean losses are $996.50 and
+$1,013.00; R gives $1,047.00 and $1,069.00. The analytical expectation is
+$1,000 in both cases. Python joint-default frequencies are 1.04% and 10.13%;
+R gives 1.01% and 10.69%, against analytical values of 1% and 10%.
+All four mean-loss and joint-frequency comparisons fall within four analytical
+Monte Carlo standard errors of their targets. Different pseudo-random number
+generators explain why identical seeds do not imply identical scenarios.
+Both independent chapter renders pass in the recorded local environments.
+
+## Foundations bond example (October 15, 2026)
+
+Added the one-year fixed-recovery bond calibration and default-protection
+valuation. All 11 new numerical inputs/results agree with the R companion
+within 1e-12. The supplied price is kept at 94/1.05 throughout calculation;
+q=0.10, the risk-neutral expected payment is 94, and protection costs
+6/1.05=5.714285714285714. Valuation by the risk-free/risky bond price
+difference agrees within floating-point precision. Statewise combined
+payments are 100 in both repayment and default. The 44 original Python
+results and 72 original R numerical objects remain unchanged against the
+pre-addition snapshots. Both Foundations chapter renders pass. These are
+local checks; no claim of a new cross-platform or clean-install audit is made.

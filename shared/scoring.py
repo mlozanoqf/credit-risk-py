@@ -27,7 +27,7 @@ def load_data():
     clean = income_ok.loc[income_ok.emp_len<=income_ok.age-16].copy()
     manifest = Path('data/credit-scoring/reference-split.csv')
     if not manifest.is_file():
-        raise FileNotFoundError('The reference-split.csv supplied with authorized data is required.')
+        raise FileNotFoundError('The reference-split.csv supplied with the dataset is required.')
     split = pd.read_csv(manifest)
     ids = split.file_row.to_numpy()
     if len(ids)!=len(clean) or len(np.unique(ids))!=len(ids) or set(ids)!=set(clean.index):

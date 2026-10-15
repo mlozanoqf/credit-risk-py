@@ -7,8 +7,7 @@ local HTML reports; it does not build the publisher PDF.
 
 **Pre-publication access:** this repository is private while the book is being
 prepared. Public access is planned for the book's publication, at the same URL.
-The complete frozen credit-scoring data and reference split are included for
-authorized repository users. Future public redistribution remains under review.
+The complete frozen credit-scoring data and reference split are included.
 
 Foundations and Chapters 1-6 are implemented. The credit-scoring inputs for
 Chapters 1-2 are supplied with a provenance and modification notice. Third-party data retain their
@@ -31,8 +30,8 @@ py -3.12 -m venv .venv
 
 On macOS/Linux use `python3.12 -m venv .venv` and `.venv/bin/python` in the
 commands below. The recorded environment has been tested on Windows; other
-platforms still require validation. A separate clean Windows environment has
-been tested without the credit-scoring inputs. The lock includes a Windows-only dependency
+platforms still require validation. The clean Windows test covers Foundations
+and Chapters 3-6; Chapters 1-2 were verified in the recorded environment. The lock includes a Windows-only dependency
 with an environment marker. LaTeX is not required.
 
 ## Run a chapter
@@ -43,12 +42,11 @@ with an environment marker. LaTeX is not required.
 
 Other chapter IDs are `00-foundations`, `01-logistic`, `02-tree-based`,
 `04-credit-spreads-cds`, `05-copulas` and `06-climate-credit-risk`.
-Each can run independently; Chapters 1-2 require the authorized dataset
+Each can run independently; Chapters 1-2 use the supplied dataset
 and its frozen split manifest. The simple Python tree is an explicitly documented
 scikit-learn adaptation of the R tree, with different leaves and predictions.
-Without those two input files, Chapters 1-2 stop with a data-availability message.
-The complete private checkout supplies both files. Foundations and Chapters 3-6 run using the included frozen
-inputs, subject to the source conditions described below.
+Download the complete repository to keep the chapter code, helpers and
+reference inputs together. Foundations and Chapters 3-6 use their own inputs.
 
 Each chapter starts a fresh Python process through Quarto/Jupyter. To read or
 extend the calculations, open its `chapter.qmd`. Download the complete project
@@ -87,9 +85,9 @@ substituting a financial method requires a separate decision.
 
 ## Data availability
 
-The complete scoring dataset for Chapters 1-2 is included in the private
+The complete scoring dataset for Chapters 1-2 is included in the
 repository. Its [provenance note](data/credit-scoring/PROVENANCE.md) documents
-the original course, the modifications and the pending public-release review.
+the original course and the modifications.
 The Python implementation uses the same RDS as the book and R companion.
 Other frozen inputs retain their original source notes and conditions.
 The author has chosen to include the limited iShares and NGFS extracts.
@@ -108,20 +106,19 @@ The R repository is read-only reference material, not a runtime dependency.
 
 ## Checks
 
-After rendering Foundations and Chapters 3-6, the data-independent check commands are:
+After rendering the chapters, run the tests and output checks:
 
 ```powershell
 .venv\Scripts\python.exe -m unittest discover -s checks -p "test_*.py" -v
-.venv\Scripts\python.exe checks/check_outputs.py --chapters 00-foundations 03-merton 04-credit-spreads-cds 05-copulas 06-climate-credit-risk
+.venv\Scripts\python.exe checks/check_outputs.py
 ```
 
-Six scoring-model tests are explicitly skipped when the restricted data are
-absent. Generic classification and policy tests still run. With authorized
-inputs and all chapters rendered, omit `--chapters` to check every output.
+All 37 tests pass with the supplied reference inputs. Use `--chapters` with
+`check_outputs.py` to check a subset of rendered chapters.
 The scripts named `compare_*`, `diagnose_*`, `export_*` and `scoring_probe.py`
 are maintainer diagnostics requiring separate local R references; they are
-not part of the reader's execution workflow. `audit_release.py --private-scoring-inputs`
-audits the private Git candidate and writes its file hashes under ignored `.local/`.
+not part of the reader's execution workflow. `audit_release.py`
+audits the Git candidate and writes its file hashes under ignored `.local/`.
 
 ## License
 

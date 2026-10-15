@@ -1,4 +1,4 @@
-"""Financial and computational invariants; authorized local data are required."""
+"""Financial and computational invariants; reference input data are required."""
 import importlib.util
 from pathlib import Path
 import sys
@@ -36,7 +36,7 @@ class PolicyTests(unittest.TestCase):
 
 
 @unittest.skipUnless((ROOT/'data/credit-scoring/credit_scoring.rds').exists(),
-                     'Authorized credit data not present')
+                     'Reference credit data not present')
 class ScoringTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

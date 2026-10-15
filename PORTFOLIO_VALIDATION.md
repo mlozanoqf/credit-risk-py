@@ -136,6 +136,5 @@ Rscript --vanilla checks/export_portfolio_reference.R ../credit-risk-r .local
 .venv\Scripts\python.exe checks/exact_gaussian_tail.py
 ```
 
-Generated HTML, tables, plots and diagnostic arrays remain local. Restricted
-credit-scoring inputs are still excluded from Git. No publisher PDF, manuscript,
+Generated HTML, tables, plots and diagnostic arrays remain local. No publisher PDF, manuscript,
 contracts or instructor solutions enter this companion.

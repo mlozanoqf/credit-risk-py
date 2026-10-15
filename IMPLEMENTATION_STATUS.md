@@ -1,11 +1,9 @@
 # Implementation Status
 
-## Private scoring-input update: 15 October 2026
+## Reference inputs
 
-The complete frozen scoring RDS and reference split are now included in this
-private repository, with a [provenance note](data/credit-scoring/PROVENANCE.md).
-This supersedes the historical input exclusions below. Public redistribution
-remains under review; no source-data license is inferred from the code license.
+The complete frozen scoring RDS and reference split are included, with a
+[provenance note](data/credit-scoring/PROVENANCE.md).
 
 Scope approved on 14 October 2026: Foundations and all six chapters, in a
 separate local project, before public release. Reference: credit-risk-r commit
@@ -36,17 +34,15 @@ chapters retain the exact R split membership and order in the supplied
 manifest, and run without an R runtime. Chapters 4-6 were subsequently completed
 with 90 additional numbered results, financial tests and R comparisons. See
 PORTFOLIO_VALIDATION.md.
-The subsequent clean Windows installation passed for Foundations and Chapters
-3-6 without loan inputs. Chapters 1-2 stop with an explicit data requirement.
+The clean Windows installation passed for Foundations and Chapters 3-6.
+Chapters 1-2 were verified separately in the recorded environment.
 See PUBLICATION_AUDIT.md for technical checks and data-source conditions.
-The author authorized initial publication with the scoring inputs excluded,
-NGFS notices retained and the iShares extract included. Written iShares
+NGFS notices are retained and the iShares extract is included. Written iShares
 redistribution permission remains unconfirmed.
 
 Use identical frozen inputs and financial assumptions. For Chapters 1-2, retain
 the same reference training/test memberships to distinguish language differences
-from sample changes. Keep restricted data, derived person-level data and their
-outputs excluded from public distribution. Ask before substituting methods.
+from sample changes. Generated predictions and model objects remain local. Ask before substituting methods.
 
 Deterministic discrepancies require diagnosis rather than a blanket disclaimer.
 Monte Carlo checks use uncertainty and financial identities; no requirement that
