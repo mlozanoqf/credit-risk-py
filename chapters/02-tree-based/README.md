@@ -1,11 +1,18 @@
 # Tree-based credit scoring
 
-From the project root on Windows: `.venv\Scripts\python.exe run.py 02-tree-based`.
+First use? Complete the [setup walkthrough](../../README.md#first-time-prepare-your-computer).
+In **PowerShell**, opened in the extracted project folder, run:
+
+```powershell
+.\.venv\Scripts\python.exe start.py 02-tree-based
+```
 
 On macOS/Linux, use `.venv/bin/python` in place of the Windows interpreter path.
+After **Complete:** appears, the browser opens `output/02-tree-based/chapter.html`.
+If it stays closed, open that file manually from the extracted project folder.
 
 Open [chapter.qmd](chapter.qmd) to read or edit the calculations.
-Execute in source order. [Results](../../README.md#results) are created locally.
+Execute in source order. [Results](../../README.md#output-and-comparison-with-r) are created locally.
 
 **Frozen data included.** The complete repository supplies the RDS and reference split, with a brief provenance note. No R session is required.
 
@@ -39,12 +46,12 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Table 2.17 | Reconstructing John Doe's XGBoost score and predicted PD. | [Code](chapter.qmd#L421) |
 | Table 2.18 | Largest local contributions to John Doe's XGBoost log-odds score. | [Code](chapter.qmd#L429) |
 | Figure 2.8 | Partial dependence of XGBoost predicted default probability. | [Code](chapter.qmd#L436) |
-| Table 2.19 | Out-of-sample performance of the credit-scoring models. | [Code](chapter.qmd#L468) |
-| Figure 2.9 | ROC curves: logistic regression, single tree, and XGBoost. | [Code](chapter.qmd#L476) |
-| Table 2.20 | Probability checks within each model's own risk deciles. | [Code](chapter.qmd#L481) |
-| Figure 2.10 | Calibration by decile: logistic regression and XGBoost. | [Code](chapter.qmd#L486) |
-| Figure 2.11 | Bad rate by target acceptance rate: logistic regression, single tree, and XGBoost. | [Code](chapter.qmd#L491) |
-| Figure 2.12 | Net payoff by target acceptance rate: logistic regression, single tree, and XGBoost. | [Code](chapter.qmd#L502) |
-| Table 2.21 | Numerical check of the overall best net-payoff strategy. | [Code](chapter.qmd#L518) |
-| Table 2.22 | Best net-payoff row by model. | [Code](chapter.qmd#L527) |
-| Table 2.23 | Governance checklist for moving from a tree-based score to a credit policy. | [Code](chapter.qmd#L539) |
+| Table 2.19 | Out-of-sample performance of the credit-scoring models. | [Code](chapter.qmd#L465) |
+| Figure 2.9 | ROC curves: logistic regression, single tree, and XGBoost. | [Code](chapter.qmd#L473) |
+| Table 2.20 | Probability checks within each model's own risk deciles. | [Code](chapter.qmd#L478) |
+| Figure 2.10 | Calibration by decile: logistic regression and XGBoost. | [Code](chapter.qmd#L483) |
+| Figure 2.11 | Bad rate by target acceptance rate: logistic regression, single tree, and XGBoost. | [Code](chapter.qmd#L488) |
+| Figure 2.12 | Net payoff by target acceptance rate: logistic regression, single tree, and XGBoost. | [Code](chapter.qmd#L499) |
+| Table 2.21 | Numerical check of the overall best net-payoff strategy. | [Code](chapter.qmd#L515) |
+| Table 2.22 | Best net-payoff row by model. | [Code](chapter.qmd#L524) |
+| Table 2.23 | Governance checklist for moving from a tree-based score to a credit policy. | [Code](chapter.qmd#L536) |

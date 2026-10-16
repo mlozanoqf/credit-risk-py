@@ -130,7 +130,7 @@ Python environment; other platforms still require testing.
 .venv\Scripts\python.exe run.py 00-foundations
 .venv\Scripts\python.exe run.py 01-logistic
 .venv\Scripts\python.exe run.py 02-tree-based
-.venv\Scripts\python.exe checks/check_outputs.py
+.venv\Scripts\python.exe checks/check_outputs.py --chapters 00-foundations 01-logistic 02-tree-based
 ```
 
 Maintainer comparison commands additionally require the local R reference:

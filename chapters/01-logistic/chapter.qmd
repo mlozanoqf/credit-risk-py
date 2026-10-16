@@ -41,6 +41,8 @@ raw,income_ok,clean,train,test,original_names = load_data()
 
 ## 1.2 Data exploration and cleaning
 
+The recorded default label is `loan_status`, renamed `loan_st` for analysis, with 1 for default and 0 for no default. The supplied documentation leaves its follow-up horizon unspecified. Throughout Chapters 1 and 2, a fitted PD estimates the probability of this label conditional on the model's inputs. Its interpretation as an annual or lifetime PD remains unvalidated and would require a documented observation horizon and outcome validation over that horizon.
+
 ### Table 1.1 {#result-table-1-1}
 ```{python}
 show_table(out,'1.1',pd.DataFrame({'Original name':original_names,'Book name':raw.columns}))
@@ -290,6 +292,8 @@ The target is a quantile input. The realized rate counts predictions at or
 below the resulting cutoff, including ties. Linear interpolation locates a
 cutoff between adjacent sorted scores; it does not smooth the score distribution.
 
+The always-no-default rule accepts every applicant, including those who default, while the always-default rule rejects every applicant. The usefulness of these rules and the fitted-model cutoff depends on repayment and default payoffs and on the bank's lending capacity. Accuracy alone is insufficient to establish which policy is useful.
+
 ### Table 1.10 {#result-table-1-10}
 ```{python}
 show_table(out,'1.10',pd.DataFrame([
@@ -405,6 +409,8 @@ el_pd,el_ead,el_lgd = full[0],test.iloc[0].l_amnt,.6
 el_expected_loss = el_pd*el_ead*el_lgd
 display(pd.Series({'PD':el_pd,'EAD ($)':el_ead,'LGD':el_lgd,'Expected loss ($)':el_expected_loss}))
 ```
+
+The preceding expected-loss calculation maps the first test applicant's fitted label probability into dollars using the original loan amount as EAD and an assumed LGD of 60%. Because the default label has an undocumented follow-up horizon, this is an illustrative monetary mapping under the assumption that PD, LGD, and EAD refer to the same exposure and horizon. Interpreting the result as annual expected loss would require documenting that horizon and validating the inputs for a one-year period.
 
 ## 1.7 Discrimination, calibration and policy
 

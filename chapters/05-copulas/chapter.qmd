@@ -283,6 +283,12 @@ print({'VaR 99%':q,'Rows strictly above VaR':int(np.sum(losses[1]>q)),
 show_table(out,'5.11',money_summary(loss_summary).round(4))
 ```
 
+These losses use five-year default events and fixed exposures and LGDs, with
+no discounting. Expected loss, VaR, and ES therefore share the same five-year,
+undiscounted basis. Interpreting VaR minus expected loss as an additional capital
+buffer assumes that expected loss is covered separately over that horizon,
+for example through pricing income or provisions available to absorb it.
+
 ### Figure 5.8 {#result-figure-5-8}
 
 ```{python}

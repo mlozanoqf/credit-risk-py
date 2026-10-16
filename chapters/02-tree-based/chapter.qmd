@@ -448,10 +448,7 @@ fig.tight_layout()
 show_figure(out,'2.8',fig)
 ```
 
-At each grid point the code replaces one predictor for every test borrower,
-rebuilds the encoded matrix and averages predicted PDs. This is a model-based
-summary. Correlated characteristics may make some replacements atypical, so
-the curve should be interpreted as model sensitivity rather than a causal effect.
+At each grid point, the code replaces one predictor for every test borrower, holds all other recorded features fixed, rebuilds the encoded matrix, and averages predicted PDs. This can create implausible combinations even after cleaning. Assigning age 22 to a borrower with more than six years of employment tenure, for example, violates the assumed employment start age of 16. The curves summarize model responses to the constructed profiles, including combinations that may be unsupported by the cleaned data. Interpretations about feasible borrowers should be restricted to plausible combinations supported by the data, and a causal interpretation would require a separate research design.
 
 ## 2.6 Comparing models and lending strategies
 

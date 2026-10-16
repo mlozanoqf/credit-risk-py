@@ -15,7 +15,7 @@ before fitting models. Missing inputs produce an explicit error.
 
 Read the RDS directly with `rdata.read_rds`; the library preserves factor
 levels. `shared/scoring.py` performs cleaning and applies the split. Run
-`python run.py 01-logistic` from the project root after environment setup.
+`.venv\Scripts\python.exe run.py 01-logistic` from the project root after environment setup.
 Chapter 2 rebuilds these steps independently.
 
 ## Dictionary
@@ -41,3 +41,5 @@ Original file rows identify positions within this frozen file. Human-facing
 test positions are one-based; Python `.iloc` positions are zero-based.
 The outcome column is excluded from the design matrix. Category baselines are
 A, MORTGAGE, 0 and E, following the R factor levels.
+
+The supplied documentation leaves the follow-up horizon for `loan_status` unspecified. In Chapters 1 and 2, a fitted PD estimates the probability of this recorded default label conditional on the model's inputs. Its interpretation as an annual or lifetime PD remains unvalidated and would require a documented observation horizon and outcome validation over that horizon. The expected-loss illustration assumes a matching horizon for PD, LGD, and EAD; interpreting it as annual expected loss would require validation of those inputs for a one-year period.

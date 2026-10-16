@@ -7,9 +7,11 @@ The reference is credit-risk-r commit
 
 ## Coverage
 
-The implemented pilot covers all 26 figures and 14 tables in Chapter 3.
-Foundations and Chapters 1, 2, 4, 5 and 6 remain planned. This validation
-does not certify those chapters or installations on other operating systems.
+At the pilot validation date of 14 October 2026, the implemented pilot covered
+all 26 figures and 14 tables in Chapter 3. Foundations and Chapters 1, 2, 4, 5
+and 6 were still planned at that stage. See the current
+[implementation status](IMPLEMENTATION_STATUS.md) for their subsequent coverage.
+This pilot record covers Chapter 3 checks in the recorded local environment.
 
 ## Checks completed
 
@@ -56,7 +58,7 @@ From the project root on Windows, with Quarto on PATH:
 ```powershell
 .venv\Scripts\python.exe -m unittest discover -s checks -p "test_*.py" -v
 .venv\Scripts\python.exe run.py 03-merton
-.venv\Scripts\python.exe checks/check_outputs.py
+.venv\Scripts\python.exe checks/check_outputs.py --chapters 03-merton
 .venv\Scripts\python.exe -m pip check
 ```
 

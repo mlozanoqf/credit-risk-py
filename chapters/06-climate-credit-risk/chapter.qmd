@@ -177,8 +177,11 @@ show_table(out,'6.9',text_table(['Required input','Credit purpose'],[
     ['Credit translation','Map damage into PD, LGD or spreads'],['Portfolio aggregation','Combine sector, geography, exposure and dependence']]))
 ```
 
-The regional DAPS results diagnose location sensitivity. They are kept separate
-from the global scenario portfolio to avoid adding overlapping shocks mechanically.
+The regional DAPS results diagnose location sensitivity using different regional
+runs and maxima that can occur in different years. They remain separate diagnostics.
+Portfolio aggregation would require adjustments from the same scenario and year
+across regions, aligned sector-region exposures, and baseline PDs compatible with
+those adjustments in default definition, annual horizon, and probability interpretation.
 
 ## 6.5 Survival-weighted expected loss
 
@@ -342,6 +345,9 @@ The same score matrix is used for both cases. Only the PD thresholds change.
 Each simulated default represents the full sector exposure in this stylized
 portfolio; the simulation is intentionally coarse. The one-year 2030 losses
 should be compared with one-year analytical EL, separately from the five-year PV.
+Both horizons provide scenario-conditioned diagnostics. Pricing or provisioning
+would require the appropriate valuation or accounting framework, with compatible
+probability measures, scenario treatment, discounting, and loss horizons.
 
 ### Table 6.14 {#result-table-6-14}
 

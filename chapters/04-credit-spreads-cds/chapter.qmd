@@ -241,6 +241,12 @@ show_table(out,'4.14',quantities(['Regular premium annuity','Accrued premium ann
     [hc['premium_annuity'],hc['accrual_annuity'],hc['risky_annuity_with_accrual'],hc['protection_leg'],hc['fair_spread']*10000]))
 ```
 
+The schedule entries are per unit of notional, while `hull_components()` returns
+premium coefficients and a protection value already scaled by notional.
+Multiplying the total premium coefficient by the spread gives the premium value.
+The fair spread is protection value divided by that coefficient; the common
+notional scale cancels.
+
 ### Table 4.15 {#result-table-4-15}
 
 ```{python}

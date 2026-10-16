@@ -56,7 +56,8 @@ def measure_table(labels, entries):
 ## 3.1 Estimating asset value and risk-neutral PD
 
 The observed equity value is 3, its annual volatility is 80%, the continuously
-compounded risk-free rate is 5%, and debt promises 10 in one year. Calibrate
+compounded risk-free rate is 5%, and debt promises 10 in one year. The valuation
+assumes no interim dividends or other asset payouts before maturity. Calibrate
 asset value and volatility by minimizing the sum of the two squared residuals.
 The implementation is in `helpers/model.py`; it uses L-BFGS-B, as does the R
 reference. Every fit is checked against the original two equations.

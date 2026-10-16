@@ -1,11 +1,18 @@
 # Climate Credit Risk
 
-From the project root on Windows: `.venv\Scripts\python.exe run.py 06-climate-credit-risk`.
+First use? Complete the [setup walkthrough](../../README.md#first-time-prepare-your-computer).
+In **PowerShell**, opened in the extracted project folder, run:
+
+```powershell
+.\.venv\Scripts\python.exe start.py 06-climate-credit-risk
+```
 
 On macOS/Linux, use `.venv/bin/python` in place of the Windows interpreter path.
+After **Complete:** appears, the browser opens `output/06-climate-credit-risk/chapter.html`.
+If it stays closed, open that file manually from the extracted project folder.
 
 Open [chapter.qmd](chapter.qmd) to read or edit the calculations.
-Execute in source order. [Results](../../README.md#results) are created locally.
+Execute in source order. [Results](../../README.md#output-and-comparison-with-r) are created locally.
 
 ## Find code by book result
 
@@ -21,14 +28,14 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Table 6.8 | Cleaned CLIMACRED credit variables for Highway to Paris in 2030. | [Code](chapter.qmd#L144) |
 | Figure 6.1 | Maximum regional physical-risk PD adjustments over 2024-2030 in selected CLIMACRED DAPS runs. | [Code](chapter.qmd#L162) |
 | Table 6.9 | Inputs needed to turn physical climate risk into a full credit-risk model. | [Code](chapter.qmd#L172) |
-| Table 6.10 | Present value of five-year portfolio expected loss with and without the CLIMACRED climate adjustment. | [Code](chapter.qmd#L199) |
-| Table 6.11 | Coal expected-loss mechanics under Highway to Paris. | [Code](chapter.qmd#L209) |
-| Figure 6.2 | Present value of five-year portfolio expected loss with and without CLIMACRED climate adjustments. | [Code](chapter.qmd#L223) |
-| Figure 6.3 | Sector contributions to the climate-related change in five-year discounted expected loss. | [Code](chapter.qmd#L240) |
-| Figure 6.4 | Climate PD adjustments by scenario and sector in 2030. | [Code](chapter.qmd#L252) |
-| Figure 6.5 | Baseline and climate-adjusted PD paths under Highway to Paris. | [Code](chapter.qmd#L268) |
-| Table 6.12 | Largest 2030 CLIMACRED corporate bond spread adjustments by scenario. | [Code](chapter.qmd#L292) |
-| Figure 6.6 | CLIMACRED bond spread adjustments compared with changes in the PD x LGD benchmark. | [Code](chapter.qmd#L300) |
-| Table 6.13 | One-year simulated portfolio loss in 2030 under Highway to Paris. | [Code](chapter.qmd#L334) |
-| Table 6.14 | Credit scores and default cutoffs for two sectors in one simulated row. | [Code](chapter.qmd#L348) |
-| Figure 6.7 | Baseline and climate-adjusted one-year portfolio loss distributions in 2030 under Highway to Paris. | [Code](chapter.qmd#L361) |
+| Table 6.10 | Present value of five-year portfolio expected loss with and without the CLIMACRED climate adjustment. | [Code](chapter.qmd#L202) |
+| Table 6.11 | Coal expected-loss mechanics under Highway to Paris. | [Code](chapter.qmd#L212) |
+| Figure 6.2 | Present value of five-year portfolio expected loss with and without CLIMACRED climate adjustments. | [Code](chapter.qmd#L226) |
+| Figure 6.3 | Sector contributions to the climate-related change in five-year discounted expected loss. | [Code](chapter.qmd#L243) |
+| Figure 6.4 | Climate PD adjustments by scenario and sector in 2030. | [Code](chapter.qmd#L255) |
+| Figure 6.5 | Baseline and climate-adjusted PD paths under Highway to Paris. | [Code](chapter.qmd#L271) |
+| Table 6.12 | Largest 2030 CLIMACRED corporate bond spread adjustments by scenario. | [Code](chapter.qmd#L295) |
+| Figure 6.6 | CLIMACRED bond spread adjustments compared with changes in the PD x LGD benchmark. | [Code](chapter.qmd#L303) |
+| Table 6.13 | One-year simulated portfolio loss in 2030 under Highway to Paris. | [Code](chapter.qmd#L337) |
+| Table 6.14 | Credit scores and default cutoffs for two sectors in one simulated row. | [Code](chapter.qmd#L354) |
+| Figure 6.7 | Baseline and climate-adjusted one-year portfolio loss distributions in 2030 under Highway to Paris. | [Code](chapter.qmd#L367) |

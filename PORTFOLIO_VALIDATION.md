@@ -125,7 +125,7 @@ on other operating systems remains a separate release task.
 .venv\Scripts\python.exe run.py 04-credit-spreads-cds
 .venv\Scripts\python.exe run.py 05-copulas
 .venv\Scripts\python.exe run.py 06-climate-credit-risk
-.venv\Scripts\python.exe checks/check_outputs.py
+.venv\Scripts\python.exe checks/check_outputs.py --chapters 04-credit-spreads-cds 05-copulas 06-climate-credit-risk
 ```
 
 Maintainer-only R comparisons save diagnostics under ignored `.local/`:

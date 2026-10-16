@@ -38,7 +38,8 @@ prove that every possible modification or untested platform is equivalent.
 
 ## Extension checks
 
-Run `python checks/test_extensions.py` from the repository root in its recorded environment.
+Run `.venv\Scripts\python.exe checks/test_extensions.py` from the repository root
+in its recorded environment.
 This checks incoming-applicant encoding against the training matrix, rejects
 unknown categories and invalid numeric inputs, verifies heterogeneous portfolio
 expected loss and borrower alignment, and deliberately tests missing climate
