@@ -300,6 +300,7 @@ show_table(out,'1.10',pd.DataFrame([
 
 ### Figure 1.14 {#result-figure-1-14}
 ```{python}
+#| fig-cap: "Figure 1.14. Full-model predicted-PD density with the 80% acceptance cutoff."
 show_figure(out,'1.14',cutoff_density(cut80))
 ```
 
@@ -471,6 +472,7 @@ show_table(out,'1.26',display_frame(pd.DataFrame(policy_rows)))
 
 ### Figure 1.18 {#result-figure-1-18}
 ```{python}
+#| fig-cap: "Figure 1.18. Full model in blue, evaluated at two acceptance rates: 65% in black, 80% in red."
 fig = roc_plot(y,{'full':full}); ax = fig.axes[0]
 for q,color,loc in [(.65,'black',(.55,.46)),(.8,RED,(.55,.26))]:
     c = classification(full,y,np.quantile(full,q,method='linear'))

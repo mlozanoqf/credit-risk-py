@@ -7,7 +7,9 @@ publisher manuscript were changed. This validation preceded the public release.
 ## Implemented coverage
 
 - Foundations: all worked calculations, including both unnumbered figures.
-  Forty-four numeric objects agree with R to numerical precision.
+  The updated comparison checks 56 shared deterministic keys (72 values)
+  against R with absolute and relative tolerances of 1e-12. Simulation
+  summaries are checked separately using analytical Monte Carlo uncertainty.
 - Chapter 1: all 20 numbered figures and 26 numbered tables, four logistic
   models, odds ratios, policy decisions, payoff comparisons, ROC and calibration.
 - Chapter 2: all 12 numbered figures and 23 numbered tables, CART adaptation,
@@ -104,14 +106,17 @@ can change appearance without changing the fitted probabilities.
 
 ## Checks and reproducibility
 
-Sixteen unit tests pass, including the existing Merton tests. They check
+The original validation passed sixteen unit tests, including the existing Merton tests. They check
 cleaning, split membership, link functions, tie handling, confusion-matrix
 direction, leaf PDs, short-fit/prefix agreement, leaf-score arithmetic, contribution
 reconstruction and payoff/decile accounting.
 
-The R comparison verifies 121 deterministic groups containing 670,350 values,
+The updated R comparison verifies 133 deterministic groups containing 670,364 values,
 including input matrices, split IDs and predictions; this count is not a count
-of distinct financial results. Retrained CART/XGBoost differences are reported
+of distinct financial results. This comprises 56 Foundations groups and the
+unchanged 77 scoring groups (670,292 values). Twelve separate Foundations
+Monte Carlo diagnostics are not included in the deterministic counts.
+Retrained CART/XGBoost differences are reported
 separately rather than forced through exact-equivalence tests. Reader indexes,
 numbered outputs, embedded images and source links are checked automatically.
 Figures were inspected as images, with annotation and legend placements revised.
@@ -150,7 +155,7 @@ At 10,000 scenarios with seed 20261014, Python mean losses are $996.50 and
 $1,013.00; R gives $1,047.00 and $1,069.00. The analytical expectation is
 $1,000 in both cases. Python joint-default frequencies are 1.04% and 10.13%;
 R gives 1.01% and 10.69%, against analytical values of 1% and 10%.
-All four mean-loss and joint-frequency comparisons fall within four analytical
+All eight engine/portfolio/summary checks fall within four analytical
 Monte Carlo standard errors of their targets. Different pseudo-random number
 generators explain why identical seeds do not imply identical scenarios.
 Both independent chapter renders pass in the recorded local environments.
@@ -167,3 +172,59 @@ payments are 100 in both repayment and default. The 44 original Python
 results and 72 original R numerical objects remain unchanged against the
 pre-addition snapshots. Both Foundations chapter renders pass. These are
 local checks; no claim of a new cross-platform or clean-install audit is made.
+
+## Foundations comparator repair (October 15, 2026)
+
+`checks/compare_scoring.py` maps R's two `simulation_check` records to Python's
+top-level `simulated_mean_loss` and `simulated_joint_pd` arrays. Both order the
+independent portfolio first and the perfectly joint portfolio second. The 56
+deterministic keys are explicit; missing keys, unexpected Python keys, shape
+changes and nonfinite values fail rather than silently reducing coverage.
+R's extra intermediate objects are not part of that deterministic contract.
+
+The simulation design is fixed at n=10,000 scenarios, two loans, loss l=$5,000
+per default and marginal probability p=0.1. R's exported scenario count and
+analytical targets are checked. Python does not export the scenario count, so
+its n=10,000 is the chapter's fixed comparison contract, not inferred from the
+observed results. The analytical mean is 2*l*p=$1,000 for both portfolios.
+Mean-loss standard errors are sqrt(2*l^2*p*(1-p)/n) for independent defaults
+and sqrt(4*l^2*p*(1-p)/n) for perfectly joint defaults. Joint-default frequency
+standard errors are sqrt(q*(1-q)/n), where q=p^2=0.01 or q=p=0.1.
+
+| Summary | Independent SE | Perfectly joint SE |
+|---|---:|---:|
+| Mean loss | $21.213203 | $30.000000 |
+| Joint-default frequency | 0.000994987 | 0.003000000 |
+
+Each engine's four summaries must be within four analytical standard errors of
+its target (eight checks). Four additional R/Python difference checks use
+sqrt(SE_Python^2+SE_R^2), assuming independent engine streams, and the same
+four-SE limit. This is a stochastic regression diagnostic, not exact equality
+or a simultaneous confidence guarantee; the twelve checks are not independent.
+The four-SE rule allows ordinary Monte Carlo variation while rejecting large
+departures without fitting a tolerance to the observed discrepancy.
+
+Diagnostics report the observed value (or Python-minus-R difference), target,
+analytical SE, signed standardized deviation, four-SE absolute tolerance and
+pass/fail result. Normal combined execution prints these separately and writes
+`.local/foundations-monte-carlo-comparison.csv`; `--scoring-only` skips them.
+
+Read-only verification of the supplied audit snapshots passed all 56 Foundations
+groups, with maximum absolute difference 2.84e-14. The largest target deviation
+was 2.30 SE and the largest cross-engine deviation was 1.683 SE. Both comparator
+modes passed, and all 77 scoring groups and scoring summary outputs were
+identical across modes. CSV writes were intercepted in memory for this staged
+verification; no baselines or original repository files were modified.
+
+All 11 focused tests in `checks/test_foundations_comparison.py` passed. They
+cover the nested R schema, analytical SEs, all deterministic-key mutations,
+all eight simulation-summary mutations, the four-SE threshold, combined
+cross-engine uncertainty, matching-but-wrong runs and malformed inputs.
+These tests use self-contained fixtures and need no private R exports:
+
+```powershell
+.venv\Scripts\python.exe -B -m unittest discover -s checks -p "test_foundations_comparison.py" -v
+```
+
+This comparator-only verification did not rerun chapter rendering, the full
+unit suite, a clean dependency installation or cross-platform checks.

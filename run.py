@@ -1,12 +1,12 @@
 """Render one implemented chapter in a fresh Quarto/Jupyter process."""
 import argparse
-import csv
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 
 
 def main():
@@ -31,17 +31,20 @@ def main():
     if not quarto:
         parser.error('Install Quarto and put its executable on PATH.')
     env = dict(os.environ, QUARTO_PYTHON=sys.executable, PYTHONHASHSEED='0')
+    from shared.verification import check_inputs, source_hashes, complete_run
+    check_inputs(root)
+    before = source_hashes(root)
+    started = time.time()
+    manifest = root/'output'/args.chapter/'run-manifest.json'
+    if manifest.exists():
+        manifest.unlink()
     subprocess.run([quarto, 'render', chapter['source'], '--to', 'html'],
                    cwd=root, env=env, check=True)
     report = root / Path(chapter['source']).with_suffix('.html')
     destination = root / 'output' / args.chapter / 'chapter.html'
     shutil.copy2(report, destination)
-    with (root / 'results-index.csv').open(encoding='utf-8-sig', newline='') as stream:
-        rows = [r for r in csv.DictReader(stream) if r['chapter'] == args.chapter]
-    missing = [r['output'] for r in rows if not (root / r['output']).is_file()]
-    if missing:
-        raise RuntimeError(f'Missing numbered outputs: {missing}')
-    print(f'Complete: {destination}\nVerified {len(rows)} numbered outputs.')
+    count = complete_run(root, args.chapter, started, before)
+    print(f'Complete: {destination}\nVerified and fingerprinted {count} fresh output files.')
 
 
 if __name__ == '__main__':

@@ -1,3 +1,5 @@
-# Keep frozen inputs byte-identical across checkout platforms.
+# Keep all frozen inputs byte-identical across checkout platforms.
+/data/**/*.csv -text whitespace=cr-at-eol
+/data/input-checksums.csv -text whitespace=cr-at-eol
 /data/credit-scoring/credit_scoring.rds -text
 /data/credit-scoring/reference-split.csv -text whitespace=cr-at-eol

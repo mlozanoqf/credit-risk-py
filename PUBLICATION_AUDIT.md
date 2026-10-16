@@ -17,8 +17,46 @@ The maintainer comparison with `--scoring-only` passes 77 deterministic groups
 covering 670,292 values. Logistic predictions agree with R to about 3.6e-12.
 Documented CART and XGBoost differences remain unchanged. This scoring rerun
 used existing packages and is distinct from a clean dependency installation.
-Foundations has separate local additions; the generic combined comparison
-needs its Foundations mapping updated before its next use.
+The staged Foundations comparator repair was separately verified against the
+existing audit snapshots on 15 October. It maps R's nested simulation records
+to Python's summary arrays and passes 56 shared deterministic keys (72 values)
+at absolute and relative tolerances of 1e-12. The combined comparison passes
+133 deterministic groups containing 670,364 values; all 77 scoring groups and
+scoring summary outputs remain identical between combined and scoring-only
+modes.
+
+Twelve separate Monte Carlo checks pass at a four-analytical-standard-error
+limit: eight engine/portfolio/summary checks against analytical targets and
+four R/Python differences using combined independent-run uncertainty. The
+design is two loans, n=10,000, $5,000 loss per default and p=0.1, with mean
+loss $1,000 and joint probabilities 0.01/0.1. Maximum deviations are 2.30 SE
+from targets and 1.683 SE across engines. Formulas, schema assumptions and
+diagnostic fields are documented in [Scoring Validation](SCORING_VALIDATION.md).
+These stochastic diagnostics are not counted as deterministic equivalence.
+
+The focused comparator tests include deliberately corrupted deterministic and
+simulation summaries. The integrated verification entry point is now
+`python checks/verify.py`; its recorded-environment regression checks are
+separate from the clean-install audit below.
+
+## Integrated verification update, 15 October 2026
+
+All seven chapters were rerun through `run.py` in the recorded environment.
+The integrated check passed 211 book-result references, 1,027 compact numerical
+checkpoints, frozen-input checksums and fresh-output hashes. All seven numerical
+snapshots are unchanged from the preceding audit, and all 85 numbered figures
+retain identical pixels. Four table exports changed in the intended descriptions
+or percentage-point presentation.
+
+All 66 unit tests passed. The complete Foundations/scoring comparison passed
+133 deterministic groups and 12 separate Monte Carlo diagnostics. Merton passed
+its existing optimizer-aware comparison; bonds, copulas and climate passed 75
+deterministic/distribution checks and 27 sampling diagnostics. The documented
+tree, XGBoost and random-stream differences remain explicit.
+
+Frozen CSVs are marked as binary for Git newline handling, preserving their exact
+recorded bytes on checkout. This update used the installed environment and did
+not repeat the clean installation or refresh provider data.
 
 ## Clean installation
 

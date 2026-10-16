@@ -147,7 +147,7 @@ show_table(out,'2.5',pd.DataFrame([
     ['Learning rate (eta)',.05,'Scales each new correction'],
     ['Row fraction',.8,'Samples training rows per tree'],
     ['Column fraction',.8,'Samples encoded predictors per tree'],
-    ['Minimum child weight',20,'Requires sufficient summed Hessian in each child'],
+    ['Minimum child weight',20,'Minimum summed curvature weights (Hessians) p(1-p) in each child, not an applicant count'],
     ['L2 penalty (lambda)',1,'Regularizes leaf corrections'],
     ['Initial PD',base_pd,'Training default rate'],
     ['Boosting rounds',160,'Fixed model length; not selected using these test results'],

@@ -14,12 +14,106 @@ from shared.scoring import load_data,design,metrics,policy,strategy,calibration
 def read(path): return json.loads((ROOT/path).read_text(encoding='utf-8-sig'))
 
 
+FOUNDATIONS_KEYS = tuple('''
+total_exposure observed_defaults number_of_loans mean_exposure change_pp
+relative_change change_bps segment_pd segment_weight overall_pd year1_pd
+year2_conditional_pd survival_two_years cumulative_two_year_pd new_applicant_pd
+loss_in_default expected_loss loan_el portfolio_el weighted_pd portfolio_el_check
+exposure_weight mean_independent mean_together sd_independent sd_together
+cdf_independent cdf_together q95_independent q95_together normal_threshold
+normal_check central_probability odds score probability_check future_amount
+present_value_check discount_factor payment_pv continuous_rate discount_discrete
+discount_exponential bond_face bond_recovery bond_rf bond_price bond_q
+bond_expected_payment bond_repriced bond_risk_free_price protection_payment
+protection_from_prices protection_from_q standard_errors scenario_el
+'''.split())
+FOUNDATIONS_SIMULATION_KEYS = ('simulated_mean_loss', 'simulated_joint_pd')
+FOUNDATIONS_MC_LIMIT = 4.0
+
+
+def compare_foundations(python, reference):
+    """Return separate deterministic and Monte Carlo diagnostics, or fail.
+
+    R's unlabeled simulation records and Python's arrays both order independent
+    loans first, perfectly joint loans second. Random streams need not match.
+    """
+    expected_keys = set(FOUNDATIONS_KEYS) | set(FOUNDATIONS_SIMULATION_KEYS)
+    if set(python) != expected_keys:
+        raise AssertionError(f'Foundations Python keys: missing {sorted(expected_keys-set(python))}, '
+                             f'unexpected {sorted(set(python)-expected_keys)}')
+    missing = set(FOUNDATIONS_KEYS) - set(reference)
+    if missing:
+        raise AssertionError(f'Foundations R keys missing: {sorted(missing)}')
+
+    def numeric(value, name, shape=None):
+        array = np.asarray(value, dtype=float)
+        if not np.all(np.isfinite(array)) or (shape is not None and array.shape != shape):
+            raise AssertionError(f'{name}: expected finite values with shape {shape}, got {array}')
+        return array
+
+    deterministic = []
+    for key in FOUNDATIONS_KEYS:
+        a = numeric(python[key], f'Foundations Python {key}')
+        b = numeric(reference[key], f'Foundations R {key}', a.shape)
+        row = {'Comparison': 'Foundations: '+key, 'Values': a.size,
+               'Max absolute difference': float(np.max(np.abs(a-b))),
+               'Tolerance met': bool(np.allclose(a, b, atol=1e-12, rtol=1e-12))}
+        if not row['Tolerance met']:
+            raise AssertionError(row)
+        deterministic.append(row)
+
+    records = reference.get('simulation_check')
+    if not isinstance(records, list) or len(records) != 2 or not all(
+            isinstance(row, dict) and all(key in row for key in (
+                *FOUNDATIONS_SIMULATION_KEYS, 'exact_mean_loss', 'exact_joint_pd'))
+            for row in records):
+        raise AssertionError('Foundations R simulation_check: expected two complete records')
+    if reference.get('n_scenarios') != 10000:
+        raise AssertionError('Foundations simulations require n_scenarios=10000')
+
+    n, loss, p = 10000, 5000, .1
+    targets = {'simulated_mean_loss': np.array([2*loss*p, 2*loss*p]),
+               'simulated_joint_pd': np.array([p*p, p])}
+    # Var(loss sum) is 2*l^2*p*(1-p) for independence, 4*l^2*p*(1-p)
+    # for perfectly joint defaults. Joint-frequency estimates are Bernoulli means.
+    standard_errors = {
+        'simulated_mean_loss': np.sqrt(np.array([2, 4])*loss**2*p*(1-p)/n),
+        'simulated_joint_pd': np.sqrt(targets['simulated_joint_pd'] *
+                                      (1-targets['simulated_joint_pd'])/n)}
+    diagnostics = []
+    for key in FOUNDATIONS_SIMULATION_KEYS:
+        target, se = targets[key], standard_errors[key]
+        exact_key = key.replace('simulated_', 'exact_')
+        r_target = numeric([row[exact_key] for row in records], exact_key, (2,))
+        if not np.allclose(r_target, target, atol=1e-12, rtol=1e-12):
+            raise AssertionError(f'Foundations R {exact_key}: unexpected analytical targets')
+        py = numeric(python[key], 'Foundations Python '+key, (2,))
+        rr = numeric([row[key] for row in records], 'Foundations R '+key, (2,))
+        for source, observed, expected, error in (
+                ('Python vs analytical', py, target, se),
+                ('R vs analytical', rr, target, se),
+                ('Python minus R', py-rr, np.zeros(2), np.sqrt(2)*se)):
+            for i, portfolio in enumerate(('independent', 'perfectly joint')):
+                z = float((observed[i]-expected[i])/error[i])
+                row = {'Comparison': f'Foundations MC: {source}: {portfolio}: {key}',
+                       'Scenarios per run': n, 'Observed': float(observed[i]),
+                       'Expected': float(expected[i]), 'Standard error': float(error[i]),
+                       'Signed standard errors': z, 'SE limit': FOUNDATIONS_MC_LIMIT,
+                       'Absolute tolerance': float(FOUNDATIONS_MC_LIMIT*error[i]),
+                       'Tolerance met': abs(z) <= FOUNDATIONS_MC_LIMIT}
+                if not row['Tolerance met']:
+                    raise AssertionError(row)
+                diagnostics.append(row)
+    return deterministic, diagnostics
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scoring-only', action='store_true',
                         help='Compare Chapters 1-2 without the separate Foundations reference.')
     args = parser.parse_args()
     results=[]
+    foundations_mc=[]
     def exact(name,a,b,atol=1e-7,rtol=1e-7):
         a,b=np.asarray(a,float),np.asarray(b,float)
         assert a.shape==b.shape,(name,a.shape,b.shape)
@@ -30,7 +124,8 @@ def main():
     if not args.scoring_only:
         r0=read('.local/00-foundations.json')
         p0=read('output/00-foundations/numeric-results.json')
-        for key,v in p0.items(): exact('Foundations: '+key,v,r0[key],atol=1e-12,rtol=1e-12)
+        foundations,foundations_mc=compare_foundations(p0,r0)
+        results.extend(foundations)
     r=read('.local/scoring-reference.json')
     r1=read('.local/01-logistic.json')
     r2=read('.local/02-tree-based.json')
@@ -94,6 +189,12 @@ def main():
     frame.to_csv(ROOT/'.local/scoring-comparison.csv',index=False)
     pd.DataFrame(results).to_csv(ROOT/'.local/deterministic-comparison.csv',index=False)
     print(f'{len(results)} deterministic groups passed; {sum(x["Values"] for x in results):,} values compared.')
+    if foundations_mc:
+        mc_frame=pd.DataFrame(foundations_mc)
+        mc_frame.to_csv(ROOT/'.local/foundations-monte-carlo-comparison.csv',index=False)
+        print(f'{len(foundations_mc)} Foundations Monte Carlo checks passed '
+              f'(limit {FOUNDATIONS_MC_LIMIT:g} analytical standard errors).')
+        print(mc_frame.to_string(index=False))
     print(frame.to_string(index=False))
     print('Tree leaves: R',r['tree_leaves'],'Python',p2['tree_leaves'])
     print('Random-score AUC: R',r1['auc_rand'],'Python',p1['random_auc'])

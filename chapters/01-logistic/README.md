@@ -34,26 +34,26 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Table 1.8 | First six full-model predictions after applying the 15% cutoff. | [Code](chapter.qmd#L269) |
 | Table 1.9 | Ten test-set cases comparing predicted PD, cutoff decision, observed outcome, and credit consequence. | [Code](chapter.qmd#L274) |
 | Table 1.10 | Accuracy can reward poor credit-screening rules. | [Code](chapter.qmd#L294) |
-| Figure 1.14 | Full model prediction histogram with acceptance-rate cutoff. | [Code](chapter.qmd#L302) |
-| Table 1.11 | Cutoffs implied by target acceptance rates. | [Code](chapter.qmd#L307) |
-| Table 1.12 | Classification outcomes under the 15% cutoff and the 80% acceptance rule. | [Code](chapter.qmd#L314) |
-| Table 1.13 | Sample of test-set outcomes under the 80% acceptance rule. | [Code](chapter.qmd#L322) |
-| Table 1.14 | First 12 accept/reject decisions with ex-post evaluation. | [Code](chapter.qmd#L327) |
-| Table 1.15 | First 10 accepted applications and their observed outcomes. | [Code](chapter.qmd#L332) |
-| Table 1.16 | Bad rate among accepted loans at the 80% acceptance rule. | [Code](chapter.qmd#L337) |
-| Table 1.17 | Bad rate among accepted loans at the 65% acceptance rule. | [Code](chapter.qmd#L344) |
-| Table 1.18 | Bad rate by target acceptance rate for the age-only and full logistic models. | [Code](chapter.qmd#L353) |
-| Figure 1.15 | Bad-rate comparison between the age-only model and the full model. | [Code](chapter.qmd#L361) |
-| Table 1.19 | Net payoff across acceptance rates for the full logistic model. | [Code](chapter.qmd#L379) |
-| Table 1.20 | Numerical check of the best net-payoff row. | [Code](chapter.qmd#L385) |
-| Table 1.21 | Net-payoff sensitivity to the cost of accepting a default. | [Code](chapter.qmd#L395) |
-| Table 1.22 | Confusion-matrix language translated into credit decisions. | [Code](chapter.qmd#L411) |
-| Table 1.23 | Sensitivity, specificity, and error rates in credit language. | [Code](chapter.qmd#L421) |
-| Figure 1.16 | ROC curves: Full model in blue, age model in orange. | [Code](chapter.qmd#L431) |
-| Table 1.24 | Calibration by predicted-risk decile for the full and age-only models. | [Code](chapter.qmd#L437) |
-| Figure 1.17 | Calibration by decile: full model in blue, age model in orange. | [Code](chapter.qmd#L444) |
-| Table 1.25 | Brier score and Brier skill against a constant default-rate benchmark. | [Code](chapter.qmd#L453) |
-| Table 1.26 | Cutoffs and error rates implied by two acceptance policies. | [Code](chapter.qmd#L461) |
-| Figure 1.18 | Full model in blue, evaluated in two acceptance rates: 65% in black, 80% in red. | [Code](chapter.qmd#L473) |
-| Figure 1.19 | Random-score ROC benchmark. | [Code](chapter.qmd#L486) |
-| Figure 1.20 | Perfect-score ROC benchmark. | [Code](chapter.qmd#L495) |
+| Figure 1.14 | Full-model predicted-PD density with the 80% acceptance cutoff. | [Code](chapter.qmd#L302) |
+| Table 1.11 | Cutoffs implied by target acceptance rates. | [Code](chapter.qmd#L308) |
+| Table 1.12 | Classification outcomes under the 15% cutoff and the 80% acceptance rule. | [Code](chapter.qmd#L315) |
+| Table 1.13 | Sample of test-set outcomes under the 80% acceptance rule. | [Code](chapter.qmd#L323) |
+| Table 1.14 | First 12 accept/reject decisions with ex-post evaluation. | [Code](chapter.qmd#L328) |
+| Table 1.15 | First 10 accepted applications and their observed outcomes. | [Code](chapter.qmd#L333) |
+| Table 1.16 | Bad rate among accepted loans at the 80% acceptance rule. | [Code](chapter.qmd#L338) |
+| Table 1.17 | Bad rate among accepted loans at the 65% acceptance rule. | [Code](chapter.qmd#L345) |
+| Table 1.18 | Bad rate by target acceptance rate for the age-only and full logistic models. | [Code](chapter.qmd#L354) |
+| Figure 1.15 | Bad-rate comparison between the age-only model and the full model. | [Code](chapter.qmd#L362) |
+| Table 1.19 | Net payoff across acceptance rates for the full logistic model. | [Code](chapter.qmd#L380) |
+| Table 1.20 | Numerical check of the best net-payoff row. | [Code](chapter.qmd#L386) |
+| Table 1.21 | Net-payoff sensitivity to the cost of accepting a default. | [Code](chapter.qmd#L396) |
+| Table 1.22 | Confusion-matrix language translated into credit decisions. | [Code](chapter.qmd#L412) |
+| Table 1.23 | Sensitivity, specificity, and error rates in credit language. | [Code](chapter.qmd#L422) |
+| Figure 1.16 | ROC curves: Full model in blue, age model in orange. | [Code](chapter.qmd#L432) |
+| Table 1.24 | Calibration by predicted-risk decile for the full and age-only models. | [Code](chapter.qmd#L438) |
+| Figure 1.17 | Calibration by decile: full model in blue, age model in orange. | [Code](chapter.qmd#L445) |
+| Table 1.25 | Brier score and Brier skill against a constant default-rate benchmark. | [Code](chapter.qmd#L454) |
+| Table 1.26 | Cutoffs and error rates implied by two acceptance policies. | [Code](chapter.qmd#L462) |
+| Figure 1.18 | Full model in blue, evaluated at two acceptance rates: 65% in black, 80% in red. | [Code](chapter.qmd#L474) |
+| Figure 1.19 | Random-score ROC benchmark. | [Code](chapter.qmd#L488) |
+| Figure 1.20 | Perfect-score ROC benchmark. | [Code](chapter.qmd#L497) |

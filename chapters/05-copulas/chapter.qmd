@@ -166,7 +166,7 @@ values['one_firm_sim_pd'] = one_pd
 
 ```{python}
 show_table(out,'5.5',pd.DataFrame({'Year':[5],'Input PD':[.15],'Threshold':[thresholds[-1]],
-    'Simulated PD':[one_pd],'Difference':[one_pd-.15]}))
+    'Simulated PD':[one_pd],'Difference (pp)':[100*(one_pd-.15)]}))
 ```
 
 ### Figure 5.5 {#result-figure-5-5}
@@ -399,7 +399,8 @@ show_table(out,'5.16',descriptive(['Quantity','Value'],[
 ```{python}
 show_table(out,'5.17',descriptive(['Financial object','Python object','Role'],[
     ['$Q(T)$','pd1','Individual one-year PD'],['$\\rho$','rho','Common-factor correlation'],
-    ['$\\alpha$','confidence','Loss percentile'],['EAD','total_ead','Total exposure'],['LGD','1-rec','Lost fraction'],
+    ['$\\alpha$','confidence','Confidence level used to select the loss percentile; tail probability is 1-alpha'],
+    ['EAD','total_ead','Total exposure'],['LGD','1-rec','Lost fraction'],
     ['Tail default rate','vasicek_rate()','Conditional PD in the adverse factor state'],
     ['Credit VaR','total_ead*(1-rec)*tail_rates','Dollar loss percentile']]))
 ```

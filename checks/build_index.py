@@ -1,9 +1,43 @@
-"""Rebuild reader indexes from the frozen result metadata and current QMD lines."""
+"""Rebuild reader indexes without replacing chapter introductions or data notices."""
 import csv
+import io
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def update_readme(path, rows):
+    original = path.read_bytes()
+    text = original.decode('utf-8')
+    newline = '\r\n' if '\r\n' in text else '\n'
+    pattern = r'^\| Result \| Title \| Code \|\r?\n\|---\|---\|---\|\r?\n(?:\|[^\r\n]*\|\r?\n)*'
+    matches = list(re.finditer(pattern, text, re.MULTILINE))
+    if len(matches) != 1:
+        raise ValueError(f'Expected one result table in {path}')
+    table = ['| Result | Title | Code |', '|---|---|---|']
+    for row in rows:
+        title = row['title'].replace('|', '\\|')
+        table.append(f"| {row['kind']} {row['number']} | {title} | "
+                     f"[Code](chapter.qmd#L{row['source_line']}) |")
+    match = matches[0]
+    updated = (text[:match.start()] + newline.join(table) + newline +
+               text[match.end():]).encode('utf-8')
+    if path.read_bytes() != original:
+        raise RuntimeError(f'{path} changed during the rebuild; rerun it')
+    if updated != original:
+        path.write_bytes(updated)
+
+
+def write_index(path, rows, fields):
+    stream = io.StringIO(newline='')
+    writer = csv.DictWriter(stream, fieldnames=fields)
+    writer.writeheader()
+    writer.writerows(rows)
+    updated = stream.getvalue().encode('utf-8')
+    if path.read_bytes() != updated:
+        path.write_bytes(updated)
 
 
 def main():
@@ -13,45 +47,30 @@ def main():
     result_rows = []
     for chapter in chapters:
         folder = ROOT / 'chapters' / chapter['id']
-        folder.mkdir(parents=True, exist_ok=True)
-        intro = f"# {chapter['title']}\n\n"
         if chapter['status'] != 'implemented':
-            intro += ('Planned Python implementation. The R companion is the reference.\n'
-                      'This chapter is not yet executable in Python.\n')
-            if chapter['id'] in ('01-logistic', '02-tree-based'):
-                intro += '\nSee the scoring data provenance and availability note.\n'
-            (folder / 'README.md').write_text(intro, encoding='utf-8')
             continue
-        intro += (f"From the project root: `python run.py {chapter['id']}`.\n\n"
-                  'Open [chapter.qmd](chapter.qmd) to read or edit the calculations.\n'
-                  'Execute in source order. [Results](../../README.md#results) are created locally.\n\n'
-                  '## Find code by book result\n\n| Result | Title | Code |\n|---|---|---|\n')
-        if chapter['id'] in ('01-logistic','02-tree-based'):
-            intro = intro.replace('## Find code by book result',
-                '**Frozen data included.** The complete private checkout supplies the RDS and reference split, '
-                'with a source and modification notice. No R session is required.\n\n## Find code by book result')
         lines = (ROOT / chapter['source']).read_text(encoding='utf-8').splitlines()
-        for row in [r for r in reference if r['chapter'] == chapter['id']]:
+        chapter_rows = [r for r in reference if r['chapter'] == chapter['id']]
+        for row in chapter_rows:
             marker = '{#' + row['anchor'] + '}'
-            heading = next(i for i, line in enumerate(lines) if marker in line)
-            block = next(i for i in range(heading+1, len(lines)) if lines[i] == '```{python}')
-            row = dict(row)
-            if chapter['id']=='02-tree-based' and row['kind']=='Table':
-                row['title'] = {'2.9':'First two XGBoost rounds: code values and algebraic updates.',
-                                '2.10':'First five XGBoost rounds for the selected applicant.'}.get(row['number'],row['title'])
-            if chapter['id']=='05-copulas' and row['kind']=='Table' and row['number']=='5.17':
-                row['title'] = 'Mapping the Credit VaR notation to the Python implementation.'
+            headings = [i for i, line in enumerate(lines) if marker in line]
+            if len(headings) != 1:
+                raise ValueError(f'Expected one {marker} in {chapter["source"]}')
+            heading = headings[0]
+            end = next((i for i in range(heading+1, len(lines))
+                        if '{#result-' in lines[i]), len(lines))
+            block = next((i for i in range(heading+1, end)
+                          if lines[i] == '```{python}'), None)
+            if block is None or row['source'] != chapter['source']:
+                raise ValueError(f'Invalid source target for {marker}')
             row['source_line'] = block+1
             if row['kind'] == 'Figure':
                 row['output'] = f"output/{chapter['id']}/figures/figure-{row['number'].replace('.', '-')}.png"
             result_rows.append(row)
-            title = row['title'].replace('|', '\\|')
-            intro += f"| {row['kind']} {row['number']} | {title} | [Code](chapter.qmd#L{block+1}) |\n"
-        (folder / 'README.md').write_text(intro, encoding='utf-8')
-    with (ROOT / 'results-index.csv').open('w', newline='', encoding='utf-8') as stream:
-        writer = csv.DictWriter(stream, fieldnames=reference[0].keys())
-        writer.writeheader()
-        writer.writerows(result_rows)
+        if chapter_rows:
+            update_readme(folder / 'README.md', chapter_rows)
+    write_index(ROOT / 'reference-results.csv', reference, reference[0].keys())
+    write_index(ROOT / 'results-index.csv', result_rows, reference[0].keys())
     print(f'Indexed {len(result_rows)} implemented results; {len(reference)} in full planned scope.')
 
 

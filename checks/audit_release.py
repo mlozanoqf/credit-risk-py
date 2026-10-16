@@ -11,9 +11,12 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from shared.verification import check_inputs
 SCORING_FILES = {
     'data/credit-scoring/credit_scoring.rds',
     'data/credit-scoring/reference-split.csv',
@@ -44,6 +47,10 @@ def main():
     allowed_scoring = SCORING_FILES
     candidates = sorted(set(git('ls-files', '--cached', '--others', '--exclude-standard', '-z').split('\0'))-{''})
     problems, manifest = [], []
+    try:
+        check_inputs(ROOT)
+    except (ValueError, FileNotFoundError) as exc:
+        problems.append(str(exc))
     for name in candidates:
         path = ROOT/name
         if path.is_symlink() or not path.resolve().is_relative_to(ROOT.resolve()):

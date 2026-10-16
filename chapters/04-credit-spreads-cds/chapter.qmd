@@ -139,7 +139,8 @@ show_figure(out,'4.1',fig)
 
 ```{python}
 show_table(out,'4.6',descriptive(['Object','Role','Python calculation'],[
-    ['Conditional PD','Default probability given survival','h'],['Survival','Weights coupons and principal','survival_end'],
+    ['Conditional PD','Probability of default during each period, conditional on survival to its start','h'],
+    ['Survival','Weights coupons and principal','survival_end'],
     ['Marginal PD','Weights each recovery payment','marginal_pd'],['Recovery','Fraction repaid after default','recovery'],
     ['Risky price','Discounted expected payments','price_coupon()'],['Credit spread','Extra promised yield','coupon_ytm()-r']]))
 ```

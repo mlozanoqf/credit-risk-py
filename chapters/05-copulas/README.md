@@ -19,11 +19,11 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Figure 5.4 | Zoom: Gaussian thresholds and cumulative PDs between -2.5 and -0.5. | [Code](chapter.qmd#L152) |
 | Table 5.5 | One-firm simulation check for the 5-year marginal PD. | [Code](chapter.qmd#L167) |
 | Figure 5.5 | One-firm simulation check with threshold comparison. | [Code](chapter.qmd#L174) |
-| Table 5.6 | Direct two-firm simulation check for $\\rho = 0.2$. | [Code](chapter.qmd#L202) |
+| Table 5.6 | Direct two-firm simulation check for $\rho = 0.2$. | [Code](chapter.qmd#L202) |
 | Table 5.7 | Two-firm default probabilities under different Gaussian copula correlations. | [Code](chapter.qmd#L208) |
 | Figure 5.6 | Two-firm Gaussian copula simulations across negative and positive correlations. | [Code](chapter.qmd#L214) |
 | Table 5.8 | Equal-correlation matrix for the ten-firm portfolio. | [Code](chapter.qmd#L241) |
-| Table 5.9 | Distribution of the number of defaults by year 5 for ten firms and $\\rho = 0.2$. | [Code](chapter.qmd#L247) |
+| Table 5.9 | Distribution of the number of defaults by year 5 for ten firms and $\rho = 0.2$. | [Code](chapter.qmd#L247) |
 | Table 5.10 | Default-event probabilities for ten firms under different copula correlations. | [Code](chapter.qmd#L253) |
 | Figure 5.7 | Distribution of the number of defaults by year 5 under different copula correlations. | [Code](chapter.qmd#L259) |
 | Table 5.11 | Portfolio loss summary for a homogeneous ten-firm portfolio. | [Code](chapter.qmd#L282) |
@@ -36,10 +36,10 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Figure 5.10 | Default-count distribution under Gaussian and t-copulas. | [Code](chapter.qmd#L368) |
 | Table 5.16 | Inputs for the Vasicek-style Credit VaR approximation. | [Code](chapter.qmd#L392) |
 | Table 5.17 | Mapping the Credit VaR notation to the Python implementation. | [Code](chapter.qmd#L399) |
-| Table 5.18 | Numerical substitution for the 99.9% Credit VaR calculation. | [Code](chapter.qmd#L409) |
-| Table 5.19 | Gaussian Vasicek Credit VaR, expected loss, capital, and expected shortfall. | [Code](chapter.qmd#L423) |
-| Table 5.20 | The 99.9% Gaussian Credit VaR calculation. | [Code](chapter.qmd#L431) |
-| Figure 5.11 | Systematic factor and conditional portfolio loss. | [Code](chapter.qmd#L439) |
-| Table 5.21 | Credit VaR model risk under Gaussian and t-copula assumptions. | [Code](chapter.qmd#L450) |
-| Figure 5.12 | Loss-tail survival probabilities under Gaussian and t-copulas. | [Code](chapter.qmd#L461) |
-| Table 5.22 | Monte Carlo precision of the 99.9% expected-shortfall comparison, in USD millions. | [Code](chapter.qmd#L477) |
+| Table 5.18 | Numerical substitution for the 99.9% Credit VaR calculation. | [Code](chapter.qmd#L410) |
+| Table 5.19 | Gaussian Vasicek Credit VaR, expected loss, capital, and expected shortfall. | [Code](chapter.qmd#L424) |
+| Table 5.20 | The 99.9% Gaussian Credit VaR calculation. | [Code](chapter.qmd#L432) |
+| Figure 5.11 | Systematic factor and conditional portfolio loss. | [Code](chapter.qmd#L440) |
+| Table 5.21 | Credit VaR model risk under Gaussian and t-copula assumptions. | [Code](chapter.qmd#L451) |
+| Figure 5.12 | Loss-tail survival probabilities under Gaussian and t-copulas. | [Code](chapter.qmd#L462) |
+| Table 5.22 | Monte Carlo precision of the 99.9% expected-shortfall comparison, in USD millions. | [Code](chapter.qmd#L478) |

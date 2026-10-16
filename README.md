@@ -110,11 +110,16 @@ After rendering the chapters, run the tests and output checks:
 
 ```powershell
 .venv\Scripts\python.exe -m unittest discover -s checks -p "test_*.py" -v
-.venv\Scripts\python.exe checks/check_outputs.py
+.venv\Scripts\python.exe checks/verify.py
 ```
 
-All 37 tests pass with the supplied reference inputs. Use `--chapters` with
-`check_outputs.py` to check a subset of rendered chapters.
+The integrated check verifies frozen input bytes, book numbering and code links,
+freshly generated outputs, and numerical regression references from the recorded
+Python environment. Run all seven chapters through `run.py` first. After changing
+sources, rerun the chapters before verification. A deliberate extension may change
+the numerical references; investigate the differences before updating those references.
+Use `--chapters` with `check_outputs.py` for a structural check of a subset.
+See [verification details](checks/README.md) for the scope of these checks.
 The scripts named `compare_*`, `diagnose_*`, `export_*` and `scoring_probe.py`
 are maintainer diagnostics requiring separate local R references; they are
 not part of the reader's execution workflow. `audit_release.py`

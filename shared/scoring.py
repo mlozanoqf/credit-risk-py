@@ -9,6 +9,12 @@ from sklearn.metrics import roc_auc_score, confusion_matrix, log_loss
 
 NAMES = ['loan_st','l_amnt','int','grade','emp_len','home','income','age','sex','region']
 DATA_MD5 = '1fbea5f14ec0c0174a946e010540b02f'
+SPLIT_SHA256 = 'a1fcea73deeea768a5d85050b701433140ef6be1293abaa04155e520fe36803c'
+
+
+def check_split_identity(manifest):
+    if hashlib.sha256(manifest.read_bytes()).hexdigest() != SPLIT_SHA256:
+        raise ValueError('Reference split checksum mismatch: membership or row order changed.')
 
 
 def load_data():
@@ -28,6 +34,7 @@ def load_data():
     manifest = Path('data/credit-scoring/reference-split.csv')
     if not manifest.is_file():
         raise FileNotFoundError('The reference-split.csv supplied with the dataset is required.')
+    check_split_identity(manifest)
     split = pd.read_csv(manifest)
     ids = split.file_row.to_numpy()
     if len(ids)!=len(clean) or len(np.unique(ids))!=len(ids) or set(ids)!=set(clean.index):
