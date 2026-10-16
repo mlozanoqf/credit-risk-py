@@ -5,7 +5,7 @@ From the project root: `python run.py 01-logistic`.
 Open [chapter.qmd](chapter.qmd) to read or edit the calculations.
 Execute in source order. [Results](../../README.md#results) are created locally.
 
-**Frozen data included.** The complete repository supplies the RDS and reference split, with a source and modification notice. No R session is required.
+**Frozen data included.** The complete repository supplies the RDS and reference split, with a brief provenance note. No R session is required.
 
 ## Find code by book result
 

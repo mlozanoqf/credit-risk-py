@@ -4,7 +4,10 @@
 
 The repository includes the complete frozen `credit_scoring.rds`
 and its `reference-split.csv`. See the [provenance note](PROVENANCE.md) for
-the DataCamp source and modifications.
+the source.
+
+The examples use a substantially modified, semi-synthetic dataset derived from the loan data accompanying Lore Dirick's DataCamp course, *Credit Risk Modeling in R*. The data support the applications in Chapters 1 and 2 and do not represent a particular lender's portfolio.
+
 The split manifest lists original file rows in their reference training/test
 order. It fixes the comparison sample without requiring an R installation.
 Python checks the dataset checksum and verifies complete, disjoint membership
@@ -17,8 +20,7 @@ Chapter 2 rebuilds these steps independently.
 
 ## Dictionary
 
-The semi-synthetic dataset contains 30,024 records and ten fields. Its results
-describe this sample rather than a defined lender's population. Cleaning removes
+The dataset contains 30,024 records and ten fields. Cleaning removes
 income above $1,000,000 and employment tenure exceeding age minus 16, leaving
 30,000 records. The reference split contains 20,000 training and 10,000 test rows.
 

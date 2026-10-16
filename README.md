@@ -10,7 +10,7 @@ prepared. Public access is planned for the book's publication, at the same URL.
 The complete frozen credit-scoring data and reference split are included.
 
 Foundations and Chapters 1-6 are implemented. The credit-scoring inputs for
-Chapters 1-2 are supplied with a provenance and modification notice. Third-party data retain their
+Chapters 1-2 are supplied with a brief provenance note. Third-party data retain their
 source conditions, and iShares redistribution permission remains unconfirmed; see
 [data terms](DATA_TERMS.md) and [release audit](PUBLICATION_AUDIT.md).
 Consult [implementation status](IMPLEMENTATION_STATUS.md), [Merton validation](VALIDATION.md),
@@ -86,8 +86,8 @@ substituting a financial method requires a separate decision.
 ## Data availability
 
 The complete scoring dataset for Chapters 1-2 is included in the
-repository. Its [provenance note](data/credit-scoring/PROVENANCE.md) documents
-the original course and the modifications.
+repository. Its [provenance note](data/credit-scoring/PROVENANCE.md) identifies
+the original course and the substantially modified, semi-synthetic adaptation.
 The Python implementation uses the same RDS as the book and R companion.
 Other frozen inputs retain their original source notes and conditions.
 The author has chosen to include the limited iShares and NGFS extracts.

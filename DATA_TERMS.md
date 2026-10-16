@@ -9,7 +9,7 @@ from permission to redistribute; it is not a legal opinion.
 `credit_scoring.rds` and `reference-split.csv` provide the complete frozen
 inputs for Chapters 1 and 2; individual predictions, trained models and rendered outputs
 remain generated locally. The [provenance note](data/credit-scoring/PROVENANCE.md)
-documents the DataCamp source and semi-synthetic modifications.
+identifies the DataCamp source and the substantially modified, semi-synthetic adaptation.
 
 ## Corporate-bond observations
 
