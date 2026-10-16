@@ -2,6 +2,7 @@
 from pathlib import Path
 import numpy as np
 import pandas as pd
+from validation import validate_climate_inputs, validate_climate_portfolio
 
 SCENARIOS = {'DIRE':'Diverging Realities','HWTP':'Highway to Paris','SWUC':'Sudden Wake-up Call'}
 METRICS = ['baseline_pd','pd_adjustment','corporate_bond_spread_adjustment',
@@ -17,6 +18,7 @@ def portfolio_inputs():
 
 
 def prepare_global(raw, portfolio):
+    validate_climate_inputs(raw, portfolio, list(SCENARIOS), range(2022, 2031), METRICS)
     raw = raw.copy()
     raw[['metric','ngfs_sector']] = raw.variable.str.split('|',n=1,expand=True)
     selected = raw.merge(portfolio,on='ngfs_sector',validate='many_to_one')
@@ -33,6 +35,7 @@ def prepare_global(raw, portfolio):
     result['lgd'] = 1-result.recovery
     if not result[['baseline_pd','climate_pd']].ge(0).all().all():
         raise ValueError('Negative PD requires explicit source review.')
+    validate_climate_portfolio(result, portfolio, list(SCENARIOS), range(2022, 2031))
     return result
 
 

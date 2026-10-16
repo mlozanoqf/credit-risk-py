@@ -289,6 +289,32 @@ show_table(out,'5.11',money_summary(loss_summary).round(4))
 show_figure(out,'5.8',distribution_plot(count_probability,np.arange(11)*6,'Portfolio loss ($ millions)',[f'rho = {r}' for r in rhos]))
 ```
 
+### Giving each borrower its own default threshold
+
+This separate extension uses the book's three illustrative borrowers, with
+five-year PDs of 2%, 5% and 10%, exposures of USD 10, 20 and 30 million, and
+recoveries of 40%, 50% and 60%. Analytical expected loss is USD 1,820,000.
+Simulation draws differ from R; compare the mean with its Monte Carlo standard
+error. Matching borrower identifiers preserves the loss associated with each
+default column even if input records are reordered.
+
+```{python}
+borrowers = pd.DataFrame({
+    'pd': [.02, .05, .10], 'ead': np.array([10, 20, 30])*1e6,
+    'recovery': [.40, .50, .60]}, index=['A', 'B', 'C'])
+hetero_scores = pd.DataFrame(latent_scores(100000, 3, .2, seed=130575),
+                             columns=borrowers.index)
+thresholds = pd.Series(norm.ppf(borrowers['pd']), index=borrowers.index)
+hetero_defaults = hetero_scores.lt(thresholds, axis='columns')
+loss_if_default = borrowers.ead * (1-borrowers.recovery)
+hetero_losses = hetero_defaults.to_numpy() @ loss_if_default.loc[hetero_defaults.columns].to_numpy()
+hetero_el = float((borrowers['pd']*loss_if_default).sum())
+hetero_mean = float(hetero_losses.mean())
+hetero_mcse = float(hetero_losses.std(ddof=1)/np.sqrt(len(hetero_losses)))
+print({'analytical_EL': hetero_el, 'simulated_EL': hetero_mean,
+       'simulation_SE': hetero_mcse})
+```
+
 ## 5.7 Concentration with unchanged default events
 
 ```{python}

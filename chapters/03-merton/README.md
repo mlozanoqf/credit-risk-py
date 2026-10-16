@@ -44,10 +44,10 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Table 3.13 | Reading the one-input Merton sensitivity curves. | [Code](chapter.qmd#L457) |
 | Figure 3.19 | A contour view of the risk-neutral probability of default as a function of equity value and equity volatility. | [Code](chapter.qmd#L469) |
 | Figure 3.20 | The risk-neutral probability of default as a function of equity value and equity volatility: a three-dimensional view. | [Code](chapter.qmd#L498) |
-| Table 3.14 | Capital-structure scenario summary under the Merton model. | [Code](chapter.qmd#L543) |
-| Figure 3.21 | Initial capital-structure position and Merton risk-neutral PD. | [Code](chapter.qmd#L558) |
-| Figure 3.22 | Debt reduction versus equity injection from the initial position. | [Code](chapter.qmd#L564) |
-| Figure 3.23 | Alternative capital-structure position and Merton risk-neutral PD. | [Code](chapter.qmd#L571) |
-| Figure 3.24 | Debt reduction versus equity injection from the alternative capital-structure position. | [Code](chapter.qmd#L578) |
-| Figure 3.25 | Initial maturity-debt position and Merton risk-neutral PD. | [Code](chapter.qmd#L585) |
-| Figure 3.26 | Higher promised debt payment versus longer maturity. | [Code](chapter.qmd#L593) |
+| Table 3.14 | Capital-structure scenario summary under the Merton model. | [Code](chapter.qmd#L549) |
+| Figure 3.21 | Initial capital-structure position and Merton risk-neutral PD. | [Code](chapter.qmd#L564) |
+| Figure 3.22 | Lower promised debt versus higher equity value from the initial position. | [Code](chapter.qmd#L570) |
+| Figure 3.23 | Alternative capital-structure position and Merton risk-neutral PD. | [Code](chapter.qmd#L577) |
+| Figure 3.24 | Lower promised debt versus higher equity value from the alternative capital-structure position. | [Code](chapter.qmd#L584) |
+| Figure 3.25 | Initial maturity-debt position and Merton risk-neutral PD. | [Code](chapter.qmd#L591) |
+| Figure 3.26 | Higher promised debt payment versus longer maturity. | [Code](chapter.qmd#L599) |

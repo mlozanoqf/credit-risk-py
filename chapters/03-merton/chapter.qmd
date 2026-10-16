@@ -538,6 +538,12 @@ for i, curve in enumerate(maturity_curves, 1):
     values[f'T{i}'] = curve
 ```
 
+These are recalibrated input configurations. A change in market equity value is
+not automatically the cash raised in an equity issue, and reducing promised
+debt need not cost its face amount today. The third comparison also changes
+the default horizon from 1.5 to 2 years. Comparing actual financing transactions
+requires their dated cash flows, costs and effects on the remaining inputs.
+
 ### Table 3.14 {#result-table-3-14}
 
 ```{python}
@@ -545,9 +551,9 @@ show_table(out, '3.14', pd.DataFrame({
     'Scenario': ['1. Hull position', '2. Lower equity/debt', '3. Liquidity and maturity'],
     'Initial position': ['$E_0=3$, $D=10$, $T=1$', '$E_0=2$, $D=2$, $T=1$', '$E_0=3$, $D=6$, $T=1.5$'],
     'Initial PD': [f'{p:.2%}' for p in [pd0,scenario2,scenario3]],
-    'Action A': ['Reduce D to 8', 'Reduce D to 1', 'Raise D to 8'],
+    'Input A': ['Reduce D to 8', 'Reduce D to 1', 'Raise D to 8'],
     'PD after A': [f'{p:.2%}' for p in [s1a,s2a,s3a]],
-    'Action B': ['Raise equity to 5', 'Raise equity to 3', 'Extend maturity to 2'],
+    'Input B': ['Raise equity to 5', 'Raise equity to 3', 'Extend maturity to 2'],
     'PD after B': [f'{p:.2%}' for p in [s1b,s2b,s3b]],
     'Lower-PD alternative': ['B' if b<a else 'A' for a,b in [(s1a,s1b),(s2a,s2b),(s3a,s3b)]]}))
 equity_labels = [f'$E_0={e}$' for e in range(1,6)]

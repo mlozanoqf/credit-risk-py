@@ -35,3 +35,12 @@ The title check concerns the reader-facing result index. Caption wording inside
 rendered figures and tables still requires editorial review against the book.
 These checks complement financial interpretation and visual review; they do not
 prove that every possible modification or untested platform is equivalent.
+
+## Extension checks
+
+Run `python checks/test_extensions.py` from the repository root in its recorded environment.
+This checks incoming-applicant encoding against the training matrix, rejects
+unknown categories and invalid numeric inputs, verifies heterogeneous portfolio
+expected loss and borrower alignment, and deliberately tests missing climate
+coverage, duplicates, incorrect units and invalid PDs. These are implementation
+checks; they do not validate the economic assumptions of a new application.

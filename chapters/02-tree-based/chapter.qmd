@@ -283,6 +283,27 @@ show_table(out,'2.11',pd.DataFrame([
     columns=['Input','Object','Meaning']))
 ```
 
+### Scoring an incoming application
+
+Reuse the training categories and column order when scoring a single applicant.
+The first held-out applicant is processed without its outcome, allowing an exact
+check against the prediction already obtained in the test batch. Replace this
+record with new predictor rows to apply the fitted model. Unseen categories
+stop the calculation for review instead of silently becoming a reference group.
+
+```{python}
+encoding_spec = importlib.util.spec_from_file_location(
+    'new_applicants', Path('chapters/02-tree-based/helpers/new_applicants.py'))
+encoding_helpers = importlib.util.module_from_spec(encoding_spec)
+encoding_spec.loader.exec_module(encoding_helpers)
+encode_applicants = encoding_helpers.make_xgb_encoder(train, xtrain.columns)
+incoming = test.drop(columns='loan_st').iloc[[0]].copy()
+incoming_matrix = encode_applicants(incoming)
+incoming_pd = float(booster.predict(xgb.DMatrix(incoming_matrix))[0])
+print({'individual_PD': incoming_pd, 'batch_PD': float(pred_xgb[0])})
+np.testing.assert_allclose(incoming_pd, pred_xgb[0], rtol=0, atol=1e-12)
+```
+
 ### Table 2.12 {#result-table-2-12}
 ```{python}
 show_table(out,'2.12',pd.DataFrame({'Quantity':['Training loans','Test loans','Encoded predictors','Boosting rounds','Trees'],

@@ -84,8 +84,21 @@ data_dir = Path('data/climate')
 manifest = pd.read_csv(data_dir/'ngfs_climacred_download_manifest.csv')
 raw = pd.read_csv(data_dir/'ngfs_climacred_global_raw.csv')
 climate_credit = prepare_global(raw,portfolio)
+from validation import validate_climate_portfolio
+climate_coverage = validate_climate_portfolio(
+    climate_credit, portfolio, list(SCENARIOS), range(2022, 2031))
+print({'scenario_year_groups': len(climate_coverage),
+       'minimum_EAD': float(climate_coverage.ead.min()),
+       'maximum_EAD': float(climate_coverage.ead.max())})
 values['climate_credit'] = climate_credit.sort_values(['scenario','portfolio_sector','year']).to_dict('records')
 ```
+
+`prepare_global()` validates the complete requested sector/scenario/year/metric
+grid before joining, including source units, duplicates, and portfolio inputs.
+Its post-join check verifies PD bounds and the original exposure and recovery
+for every sector. All 27 scenario-year groups must represent USD 100 million.
+A new portfolio must explicitly resolve missing sector mappings before losses
+are aggregated. The helper definitions are in `helpers/validation.py`.
 
 ### Table 6.4 {#result-table-6-4}
 

@@ -115,9 +115,9 @@ Figure,3.19,fig-tpodaafoteatzatvoeacv,A contour view of the risk-neutral probabi
 Figure,3.20,fig-tpodaafoteatzatvoeaiv,The risk-neutral probability of default as a function of equity value and equity volatility: a three-dimensional view.
 Table,3.14,tbl-capital-structure-scenario-summary-under-the-merton-model,Capital-structure scenario summary under the Merton model.
 Figure,3.21,fig-gppodacs,Initial capital-structure position and Merton risk-neutral PD.
-Figure,3.22,fig-gspodacs,Debt reduction versus equity injection from the initial position.
+Figure,3.22,fig-gspodacs,Lower promised debt versus higher equity value from the initial position.
 Figure,3.23,fig-gp2podacs,Alternative capital-structure position and Merton risk-neutral PD.
-Figure,3.24,fig-gs2podacs,Debt reduction versus equity injection from the alternative capital-structure position.
+Figure,3.24,fig-gs2podacs,Lower promised debt versus higher equity value from the alternative capital-structure position.
 Figure,3.25,fig-gp3mdolm,Initial maturity-debt position and Merton risk-neutral PD.
 Figure,3.26,fig-ga3mdolm,Higher promised debt payment versus longer maturity.
 Table,4.1,tbl-merton-quantities-carried-into-the-credit-spread-chapter,Merton quantities carried into the credit-spread chapter.
