@@ -1,6 +1,8 @@
 # The Merton model
 
-From the project root: `python run.py 03-merton`.
+From the project root on Windows: `.venv\Scripts\python.exe run.py 03-merton`.
+
+On macOS/Linux, use `.venv/bin/python` in place of the Windows interpreter path.
 
 Open [chapter.qmd](chapter.qmd) to read or edit the calculations.
 Execute in source order. [Results](../../README.md#results) are created locally.
@@ -15,8 +17,8 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Table 3.3 | Objective function value at the estimated Merton solution. | [Code](chapter.qmd#L117) |
 | Figure 3.2 | Objective-function slice when asset volatility is held fixed. | [Code](chapter.qmd#L132) |
 | Figure 3.3 | Objective-function slice when asset value is held fixed. | [Code](chapter.qmd#L144) |
-| Figure 3.4 | Minimization of the function: a contour view. | [Code](chapter.qmd#L156) |
-| Figure 3.5 | Minimization of the function: a three-dimensional view. | [Code](chapter.qmd#L172) |
+| Figure 3.4 | Merton objective function: a contour view. | [Code](chapter.qmd#L156) |
+| Figure 3.5 | Merton objective function: a three-dimensional view. | [Code](chapter.qmd#L172) |
 | Table 3.4 | How to read the Merton numerical-solution diagnostics. | [Code](chapter.qmd#L183) |
 | Table 3.5 | Debt measures implied by the fitted Merton model. | [Code](chapter.qmd#L213) |
 | Table 3.6 | Merton-implied bond yield and credit spread. | [Code](chapter.qmd#L224) |
@@ -29,7 +31,7 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Figure 3.10 | These paths cross below $D$ before maturity, but finish with $V_T$ above $D$ and therefore do not default. | [Code](chapter.qmd#L304) |
 | Table 3.9 | Observing the same 100 asset paths at different frequencies. | [Code](chapter.qmd#L312) |
 | Figure 3.11 | Convergence of the simulated risk-neutral probability of default to the analytical Merton probability. | [Code](chapter.qmd#L330) |
-| Figure 3.12 | Histogram of 100,000 values of the assets at maturity. | [Code](chapter.qmd#L349) |
+| Figure 3.12 | Histogram of 100,000 terminal asset values simulated under the risk-neutral measure. | [Code](chapter.qmd#L349) |
 | Table 3.10 | Large-sample simulated risk-neutral PD compared with the analytical Merton PD. | [Code](chapter.qmd#L369) |
 | Table 3.11 | Correspondence between a European call and Merton equity. | [Code](chapter.qmd#L379) |
 | Figure 3.13 | Equity at maturity as a European call payoff on the firm's assets. | [Code](chapter.qmd#L389) |
@@ -45,7 +47,7 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Table 3.14 | Capital-structure scenario summary under the Merton model. | [Code](chapter.qmd#L543) |
 | Figure 3.21 | Initial capital-structure position and Merton risk-neutral PD. | [Code](chapter.qmd#L558) |
 | Figure 3.22 | Debt reduction versus equity injection from the initial position. | [Code](chapter.qmd#L564) |
-| Figure 3.23 | Alternative starting balance sheet and Merton risk-neutral PD. | [Code](chapter.qmd#L571) |
-| Figure 3.24 | Debt reduction versus equity injection from the alternative balance sheet. | [Code](chapter.qmd#L578) |
+| Figure 3.23 | Alternative capital-structure position and Merton risk-neutral PD. | [Code](chapter.qmd#L571) |
+| Figure 3.24 | Debt reduction versus equity injection from the alternative capital-structure position. | [Code](chapter.qmd#L578) |
 | Figure 3.25 | Initial maturity-debt position and Merton risk-neutral PD. | [Code](chapter.qmd#L585) |
 | Figure 3.26 | Higher promised debt payment versus longer maturity. | [Code](chapter.qmd#L593) |

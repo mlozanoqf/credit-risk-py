@@ -1,6 +1,8 @@
 # Portfolio Credit Risk with Copulas
 
-From the project root: `python run.py 05-copulas`.
+From the project root on Windows: `.venv\Scripts\python.exe run.py 05-copulas`.
+
+On macOS/Linux, use `.venv/bin/python` in place of the Windows interpreter path.
 
 Open [chapter.qmd](chapter.qmd) to read or edit the calculations.
 Execute in source order. [Results](../../README.md#results) are created locally.
@@ -13,10 +15,10 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Figure 5.1 | Gaussian copula workflow for portfolio credit risk. | [Code](chapter.qmd#L77) |
 | Table 5.2 | Objects used in the Gaussian copula credit-risk workflow. | [Code](chapter.qmd#L92) |
 | Table 5.3 | Hull Example 24.7 inputs and the corresponding Gaussian default thresholds. | [Code](chapter.qmd#L103) |
-| Table 5.4 | Illustrative threshold rule for one simulated credit scenario. | [Code](chapter.qmd#L111) |
+| Table 5.4 | Illustrative threshold rule for one hypothetical credit scenario. | [Code](chapter.qmd#L111) |
 | Figure 5.2 | Default thresholds implied by Hull Example 24.7 cumulative PDs. | [Code](chapter.qmd#L119) |
 | Figure 5.3 | Checking that each Gaussian threshold reproduces the original cumulative PD. | [Code](chapter.qmd#L135) |
-| Figure 5.4 | Zoom: Gaussian thresholds and cumulative PDs between -2.5 and -0.5. | [Code](chapter.qmd#L152) |
+| Figure 5.4 | Zoom: Gaussian thresholds and cumulative PDs for credit-state scores between -2.5 and -0.5. | [Code](chapter.qmd#L152) |
 | Table 5.5 | One-firm simulation check for the 5-year marginal PD. | [Code](chapter.qmd#L167) |
 | Figure 5.5 | One-firm simulation check with threshold comparison. | [Code](chapter.qmd#L174) |
 | Table 5.6 | Direct two-firm simulation check for $\rho = 0.2$. | [Code](chapter.qmd#L202) |
@@ -29,7 +31,7 @@ Execute in source order. [Results](../../README.md#results) are created locally.
 | Table 5.11 | Portfolio loss summary for a homogeneous ten-firm portfolio. | [Code](chapter.qmd#L282) |
 | Figure 5.8 | Portfolio loss distribution under different copula correlations. | [Code](chapter.qmd#L288) |
 | Table 5.12 | Concentration risk with the same total exposure, PD, recovery, and copula correlation. | [Code](chapter.qmd#L303) |
-| Figure 5.9 | Same defaults and different exposure weights. | [Code](chapter.qmd#L311) |
+| Figure 5.9 | Portfolio loss distributions with the same defaults and different exposure weights. | [Code](chapter.qmd#L311) |
 | Table 5.13 | Two firms affected by the same t-copula scale draw. | [Code](chapter.qmd#L342) |
 | Table 5.14 | Default clustering under Gaussian and t-copulas. | [Code](chapter.qmd#L354) |
 | Table 5.15 | Portfolio loss measures under Gaussian and t-copulas. | [Code](chapter.qmd#L362) |

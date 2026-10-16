@@ -125,6 +125,14 @@ are maintainer diagnostics requiring separate local R references; they are
 not part of the reader's execution workflow. `audit_release.py`
 audits the Git candidate and writes its file hashes under ignored `.local/`.
 
+## Instructor resources
+
+The separate instructor manual uses the [R companion](https://github.com/mlozanoqf/credit-risk-r)
+and a restricted package of exercise-specific R scripts. Those scripts reuse
+the book's reference inputs and common R functions. This Python repository
+provides adaptations of the book applications; the instructor solutions are
+implemented in R and distributed separately.
+
 ## License
 
 Author-supplied code follows GPL-3.0, as in the R companion; see LICENSE.
