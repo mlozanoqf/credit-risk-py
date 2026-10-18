@@ -383,7 +383,13 @@ show_figure(out,'1.15',fig)
 ### Table 1.19 {#result-table-1-19}
 ```{python}
 payoff = strategy(full,y,[.50,.60,.65,.70,.75,.80,.85,.90])
-show_table(out,'1.19',display_frame(payoff))
+payoff_display = payoff.assign(
+    accept_rate=payoff.accept_rate.map(lambda x: f'{x:.0%}'),
+    actual_accept_rate=payoff.actual_accept_rate.map(lambda x: f'{x:.0%}'),
+    cutoff=payoff.cutoff.map(lambda x: f'{x:.2%}'),
+    bad_rate=payoff.bad_rate.map(lambda x: f'{x:.2%}'),
+    net_payoff=payoff.net_payoff.map(lambda x: f'-${abs(x):,.0f}' if x < 0 else f'${x:,.0f}'))
+show_table(out,'1.19',display_frame(payoff_display))
 ```
 
 ### Table 1.20 {#result-table-1-20}

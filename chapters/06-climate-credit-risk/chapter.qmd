@@ -262,7 +262,7 @@ ax.set_yticks(range(len(heat)),heat.index)
 ax.set_xticks(range(3),['Diverging\nRealities','Highway\nto Paris','Sudden\nWake-up Call'])
 for (i,j),v in np.ndenumerate(heat.to_numpy()):
     ax.text(j,i,f'{v:.1f}',ha='center',va='center',color='white' if abs(v)>.6*limit else '#222222')
-fig.colorbar(im,ax=ax,label='PD adjustment (pp)')
+fig.colorbar(im,ax=ax,label='PD adjustment (percentage points)')
 show_figure(out,'6.4',fig)
 ```
 

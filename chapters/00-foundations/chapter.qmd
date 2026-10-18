@@ -177,13 +177,13 @@ display(pd.Series({'Scenario (one-based)':simulation_example + 1,
                    'Loss ($)':sim_loss_independent[simulation_example]}))
 simulation_check = pd.DataFrame({
     'Dependence':['Independent', 'Always together'],
-    'Exact mean ($)':[mean_independent, mean_together],
-    'Simulated mean ($)':[sim_loss_independent.mean(), sim_loss_together.mean()],
+    'Exact mean loss ($)':[mean_independent, mean_together],
+    'Simulated mean loss ($)':[sim_loss_independent.mean(), sim_loss_together.mean()],
     'Exact joint PD':[.10**2, .10],
     'Simulated joint PD':[(default_1 & default_2).mean(), default_1.mean()]
 })
 display(simulation_check)
-values.update(simulated_mean_loss=simulation_check['Simulated mean ($)'].to_numpy(),
+values.update(simulated_mean_loss=simulation_check['Simulated mean loss ($)'].to_numpy(),
               simulated_joint_pd=simulation_check['Simulated joint PD'].to_numpy())
 ```
 

@@ -54,15 +54,15 @@ Execute in source order. [Results](../../README.md#output-and-comparison-with-r)
 | Table 1.18 | Bad rate by target acceptance rate for the age-only and full logistic models. | [Code](chapter.qmd#L358) |
 | Figure 1.15 | Bad-rate comparison between the age-only model and the full model. | [Code](chapter.qmd#L366) |
 | Table 1.19 | Net payoff across acceptance rates for the full logistic model. | [Code](chapter.qmd#L384) |
-| Table 1.20 | Numerical check of the best net-payoff row. | [Code](chapter.qmd#L390) |
-| Table 1.21 | Net-payoff sensitivity to the cost of accepting a default. | [Code](chapter.qmd#L400) |
-| Table 1.22 | Confusion-matrix language translated into credit decisions. | [Code](chapter.qmd#L418) |
-| Table 1.23 | Sensitivity, specificity, and error rates in credit language. | [Code](chapter.qmd#L428) |
-| Figure 1.16 | ROC curves: Full model in blue, age model in orange. | [Code](chapter.qmd#L438) |
-| Table 1.24 | Calibration by predicted-risk decile for the full and age-only models. | [Code](chapter.qmd#L444) |
-| Figure 1.17 | Calibration by decile: full model in blue, age model in orange. | [Code](chapter.qmd#L451) |
-| Table 1.25 | Brier score and Brier skill against a constant default-rate benchmark. | [Code](chapter.qmd#L460) |
-| Table 1.26 | Cutoffs, sensitivity, and specificity under two acceptance policies. | [Code](chapter.qmd#L468) |
-| Figure 1.18 | Full-model ROC curve (blue) with 65% (black) and 80% (red) acceptance policies. | [Code](chapter.qmd#L480) |
-| Figure 1.19 | Random-score ROC benchmark. | [Code](chapter.qmd#L494) |
-| Figure 1.20 | Perfect-score ROC benchmark. | [Code](chapter.qmd#L503) |
+| Table 1.20 | Numerical check of the best net-payoff row. | [Code](chapter.qmd#L396) |
+| Table 1.21 | Net-payoff sensitivity to the cost of accepting a default. | [Code](chapter.qmd#L406) |
+| Table 1.22 | Confusion-matrix language translated into credit decisions. | [Code](chapter.qmd#L424) |
+| Table 1.23 | Sensitivity, specificity, and error rates in credit language. | [Code](chapter.qmd#L434) |
+| Figure 1.16 | ROC curves: Full model in blue, age model in orange. | [Code](chapter.qmd#L444) |
+| Table 1.24 | Calibration by predicted-risk decile for the full and age-only models. | [Code](chapter.qmd#L450) |
+| Figure 1.17 | Calibration by decile: full model in blue, age model in orange. | [Code](chapter.qmd#L457) |
+| Table 1.25 | Brier score and Brier skill against a constant default-rate benchmark. | [Code](chapter.qmd#L466) |
+| Table 1.26 | Cutoffs, sensitivity, and specificity under two acceptance policies. | [Code](chapter.qmd#L474) |
+| Figure 1.18 | Full-model ROC curve (blue) with 65% (black) and 80% (red) acceptance policies. | [Code](chapter.qmd#L486) |
+| Figure 1.19 | Random-score ROC benchmark. | [Code](chapter.qmd#L500) |
+| Figure 1.20 | Perfect-score ROC benchmark. | [Code](chapter.qmd#L509) |
