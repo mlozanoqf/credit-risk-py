@@ -5,16 +5,15 @@ Martin Lozano. The book and its [R companion](https://github.com/mlozanoqf/credi
 remain the reference. This repository generates calculations, tables, figures
 and local HTML reports. It does not build the publisher PDF.
 
-**Pre-publication access:** this repository is private while the book is being
-prepared. Public access is planned for publication, at the same URL. Foundations
+**Public access:** this repository is freely accessible on GitHub. Foundations
 and Chapters 1-6 are implemented, and the complete frozen credit-scoring data
 and reference split are included.
 
 ## First time: prepare your computer
 
 The recommended Windows route uses PowerShell and a project-specific Python
-environment. You do not need Git, a GitHub account after public release, R,
-LaTeX or the publisher's template to run this companion.
+environment. Once the complete ZIP is downloaded, running the calculations requires
+neither Git nor a GitHub account, R, LaTeX or the publisher's template.
 
 1. On this GitHub page, choose **Code > Download ZIP** and extract the entire
    ZIP into a folder on your computer. Keep its files together; a chapter uses
@@ -163,7 +162,8 @@ carry the required notices. Written iShares redistribution permission remains
 unconfirmed; inclusion does not grant unrestricted reuse rights. See
 [data terms](DATA_TERMS.md) and the [release audit](PUBLICATION_AUDIT.md).
 
-The instructor manual uses the **R companion** and a separately distributed,
+The *Instructor's Manual* is available through the publisher's password-protected
+Instructor Hub, reserved for instructors. It uses the **R companion** and a separately distributed,
 restricted package of exercise-specific R scripts. Those scripts reuse the
 book's inputs and shared R functions. This Python companion provides adaptations
 of the book applications; it does not execute the instructor solutions.

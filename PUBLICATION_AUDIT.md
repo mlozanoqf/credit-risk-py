@@ -5,7 +5,7 @@
 The repository contains the complete frozen scoring dataset and reference
 split. Their source and modifications are described in the
 [provenance note](data/credit-scoring/PROVENANCE.md).
-Both companion repositories remain private until book publication.
+Both companion repositories are publicly accessible on GitHub.
 
 On 15 October 2026, both scoring chapters executed independently in the
 recorded Windows environment and reproduced byte-identical numeric JSON
