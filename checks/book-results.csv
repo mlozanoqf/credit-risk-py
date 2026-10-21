@@ -80,7 +80,7 @@ Figure,2.12,fig-tree-net-payoff-comparison,"Net payoff by target acceptance rate
 Table,2.21,tbl-numerical-check-of-the-overall-best-net-payoff-strategy,Numerical check of the overall best net-payoff strategy.
 Table,2.22,tbl-best-net-payoff-row-by-model,Best net-payoff row by model.
 Table,2.23,tbl-governance-checklist-for-moving-from-a-tree-based-score-to,Governance checklist for moving from a tree-based score to a credit policy.
-Table,3.1,tbl-estimated-merton-asset-value-asset-volatility-and-risk-neutral-default,"Estimated Merton asset value, asset volatility, and risk-neutral default probability."
+Table,3.1,tbl-estimated-merton-asset-value-asset-volatility-and-risk-neutral-default,"Estimated Merton asset value (MU), annualized asset volatility, and risk-neutral default probability."
 Table,3.2,tbl-the-d-values-and-normal-probabilities-behind-the-merton-pd,The d-values and normal probabilities behind the Merton PD.
 Figure,3.1,fig-trartpod,The red area represents the risk-neutral probability of default.
 Table,3.3,tbl-objective-function-value-at-the-estimated-merton-solution,Objective function value at the estimated Merton solution.
@@ -89,8 +89,8 @@ Figure,3.3,fig-hwftvotaatzactvota,Objective-function slice when asset value is h
 Figure,3.4,fig-motfacv,Merton objective function: a contour view.
 Figure,3.5,fig-motfaiv,Merton objective function: a three-dimensional view.
 Table,3.4,tbl-how-to-read-the-merton-numerical-solution-diagnostics,How to read the Merton numerical-solution diagnostics.
-Table,3.5,tbl-debt-measures-implied-by-the-fitted-merton-model,Debt measures implied by the fitted Merton model.
-Table,3.6,tbl-merton-implied-bond-yield-and-credit-spread,Merton-implied bond yield and credit spread.
+Table,3.5,tbl-debt-measures-implied-by-the-fitted-merton-model,Debt measures implied by the fitted Merton model. Monetary values are in MU.
+Table,3.6,tbl-merton-implied-bond-yield-and-credit-spread,Merton-implied bond yield and credit spread. Debt values are in MU; rates and yields are annual.
 Figure,3.6,fig-so10pota,Ten risk-neutral valuation paths for the firm's assets.
 Figure,3.7,fig-nttbpfdnd,Paths that cross below D before maturity; only paths ending below D default.
 Table,3.7,tbl-default-count-and-simulated-risk-neutral-pd-with-10-paths,Default count and simulated risk-neutral PD with 10 paths.
@@ -104,26 +104,26 @@ Figure,3.12,fig-ho1votaam,"Histogram of 100,000 terminal asset values simulated 
 Table,3.10,tbl-large-sample-simulated-risk-neutral-pd-compared-with-the-analytical,Large-sample simulated risk-neutral PD compared with the analytical Merton PD.
 Table,3.11,tbl-merton-call-mapping,Correspondence between a European call and Merton equity.
 Figure,3.13,fig-avotfbssitf,Equity at maturity as a European call payoff on the firm's assets.
-Table,3.12,tbl-original-hull-merton-input-position-for-the-sensitivity-analysis,Original Hull/Merton input position for the sensitivity analysis.
+Table,3.12,tbl-original-hull-merton-input-position-for-the-sensitivity-analysis,Original Hull/Merton input position for the sensitivity analysis. Monetary values are in MU; maturity is in years.
 Figure,3.14,fig-tpodaafoteaatz,The risk-neutral probability of default as a function of the equity at time zero.
 Figure,3.15,fig-tpodaafotrfr,The risk-neutral probability of default as a function of the risk-free rate.
 Figure,3.16,fig-tpodaafotd,The risk-neutral probability of default as a function of the promised debt payment due at maturity.
 Figure,3.17,fig-tpodaafotdm,The risk-neutral probability of default as a function of debt maturity.
 Figure,3.18,fig-tpodaafote,The risk-neutral probability of default as a function of the volatility of the equity.
-Table,3.13,tbl-reading-the-one-input-merton-sensitivity-curves,Reading the one-input Merton sensitivity curves.
+Table,3.13,tbl-reading-the-one-input-merton-sensitivity-curves,Reading the one-input Merton sensitivity curves. Equity and debt amounts are in MU.
 Figure,3.19,fig-tpodaafoteatzatvoeacv,A contour view of the risk-neutral probability of default as a function of equity value and equity volatility.
 Figure,3.20,fig-tpodaafoteatzatvoeaiv,The risk-neutral probability of default as a function of equity value and equity volatility: a three-dimensional view.
-Table,3.14,tbl-capital-structure-scenario-summary-under-the-merton-model,Capital-structure scenario summary under the Merton model.
+Table,3.14,tbl-capital-structure-scenario-summary-under-the-merton-model,Capital-structure scenario summary under the Merton model. Equity and debt are in MU; maturity is in years.
 Figure,3.21,fig-gppodacs,Initial capital-structure position and Merton risk-neutral PD.
 Figure,3.22,fig-gspodacs,Lower promised debt versus higher equity value from the initial position.
 Figure,3.23,fig-gp2podacs,Alternative capital-structure position and Merton risk-neutral PD.
 Figure,3.24,fig-gs2podacs,Lower promised debt versus higher equity value from the alternative capital-structure position.
 Figure,3.25,fig-gp3mdolm,Initial maturity-debt position and Merton risk-neutral PD.
 Figure,3.26,fig-ga3mdolm,Higher promised debt payment versus longer maturity.
-Table,4.1,tbl-merton-quantities-carried-into-the-credit-spread-chapter,Merton quantities carried into the credit-spread chapter.
+Table,4.1,tbl-merton-quantities-carried-into-the-credit-spread-chapter,Merton quantities carried into the credit-spread chapter. Debt amounts retain Chapter 3's common monetary unit (MU).
 Table,4.2,tbl-discrete-default-timeline-with-a-constant-2-5-conditional-pd,Discrete default timeline with a constant 2.5% conditional PD.
-Table,4.3,tbl-risk-free-and-risky-zero-coupon-valuation,Risk-free and risky zero-coupon valuation.
-Table,4.4,tbl-risk-free-and-risky-coupon-bond-valuation,Risk-free and risky coupon bond valuation.
+Table,4.3,tbl-risk-free-and-risky-zero-coupon-valuation,Risk-free and risky zero-coupon valuation. Prices are per 100 of face value.
+Table,4.4,tbl-risk-free-and-risky-coupon-bond-valuation,Risk-free and risky coupon bond valuation. Prices are per 100 of face value.
 Table,4.5,tbl-risky-coupon-bond-price-decomposition,Risky coupon bond price decomposition.
 Figure,4.1,fig-coupon-price-spread,Coupon bond price and yield spread as conditional default risk changes.
 Table,4.6,tbl-checkpoint-after-the-risky-bond-valuation-block,"Default probabilities, recovery, and their roles in bond valuation."
@@ -137,7 +137,7 @@ Table,4.12,tbl-present-value-of-expected-protection-payoff,Present value of expe
 Table,4.13,tbl-present-value-of-expected-accrued-premium,Present value of expected accrued premium for a $1 notional.
 Table,4.14,tbl-fair-cds-spread-from-premium-accrual-and-protection-legs,"Fair CDS spread including accrued premium, for a $1 notional."
 Table,4.15,tbl-refining-default-timing-while-retaining-annual-cds-premiums,Refining default timing while retaining annual CDS premiums.
-Table,4.16,tbl-mark-to-market-value-of-an-existing-cds,Mark-to-market value of an existing CDS.
+Table,4.16,tbl-mark-to-market-value-of-an-existing-cds,Mark-to-market value of an existing CDS. Present values are per unit of notional.
 Table,4.17,tbl-implied-hazard-rate-from-a-cds-spread,Implied hazard rate from a CDS spread.
 Table,4.18,tbl-quick-cds-spread-approximation-compared-with-the-accrued-premium-valuation,Quick CDS spread approximation compared with the accrued-premium valuation.
 Figure,4.3,fig-hull-cds-spread-sensitivity,Fair CDS spread under hazard and recovery assumptions.
@@ -146,13 +146,13 @@ Table,4.19,tbl-value-sensitivity-to-the-contractual-premium,Protection-seller va
 Table,4.20,tbl-checkpoint-after-the-accrued-premium-cds-valuation-block,CDS valuation tools and the credit questions they answer.
 Table,4.21,tbl-corporate-candidates,Two corporate bonds considered for purchase; prices per 100 of principal.
 Figure,4.5,fig-corporate-treasury-curve,Settlement-adjusted Treasury zero yields used to discount the corporate-bond payments.
-Table,4.22,tbl-corporate-fit-summary,Issuer-specific pricing curves and model values for the bonds excluded from calibration.
-Table,4.23,tbl-corporate-relative-value,Price and yield comparisons using the same promised payments for each bond.
+Table,4.22,tbl-corporate-fit-summary,Issuer-specific pricing curves and model values for the bonds excluded from calibration. Model clean prices are per 100 of principal.
+Table,4.23,tbl-corporate-relative-value,Price and yield comparisons using the same promised payments for each bond. Clean prices and price differences are per 100 of principal.
 Figure,4.6,fig-corporate-yield-residual,Additional promised yield relative to each bond's issuer-curve benchmark.
 Table,4.24,tbl-corporate-sensitivity,CCO minus Verizon yield-residual advantage under deterministic sensitivity checks.
 Figure,4.7,fig-corporate-break-even,How a deduction from CCO's model value changes the conditional purchase preference.
 Table,4.25,tbl-first-two-and-last-two-promised-payments-of-the-brazilian,"First two and last two promised payments of the Brazilian sovereign bond, per 100 of principal."
-Table,4.26,tbl-recovery-assumptions-and-price-implied-default-probabilities-for-the-same,Recovery sensitivity for the Brazilian bond. Fitted PDs hold the observed bond price fixed; the last column holds annual PD fixed.
+Table,4.26,tbl-recovery-assumptions-and-price-implied-default-probabilities-for-the-same,Recovery sensitivity for the Brazilian bond. Fitted PDs hold price at 99.091; the last column holds annual PD at 3.4535%. All prices are per 100 of principal.
 Figure,4.8,fig-sovereign-recovery-pd,Cumulative default probability implied by the Brazilian bond price under different recovery assumptions.
 Table,4.27,tbl-credit-spread-and-cds-valuation-checklist,Credit-spread and CDS valuation checklist.
 Table,5.1,tbl-practical-ways-to-justify-the-copula-correlation-input,Practical ways to justify the copula correlation input.
@@ -194,7 +194,7 @@ Table,6.2,tbl-how-transition-and-physical-climate-risk-enter-credit-analysis-in,
 Table,6.3,tbl-climacred-variables-used-in-the-chapter,CLIMACRED variables used in the chapter.
 Table,6.4,tbl-sector-portfolio-used-for-the-climate-credit-risk-application,Sector portfolio used for the climate credit-risk application.
 Table,6.5,tbl-ngfs-raw-file-manifest,Raw NGFS/IIASA files used in the chapter.
-Table,6.6,tbl-ngfs-raw-observations,First rows of the raw global CLIMACRED file.
+Table,6.6,tbl-ngfs-raw-observations,First rows of the raw global CLIMACRED file. All displayed values are PD adjustments in percentage points.
 Table,6.7,tbl-data-provenance-for-the-climate-credit-risk-workflow,Data provenance for the climate credit-risk workflow.
 Table,6.8,tbl-cleaned-climacred-credit-variables-for-highway-to-paris-in-2030,Cleaned CLIMACRED credit variables for Highway to Paris in 2030.
 Figure,6.1,fig-climate-physical-risk-local,Maximum regional physical-risk PD adjustments over 2024-2030 in selected CLIMACRED DAPS runs.

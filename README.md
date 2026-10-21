@@ -157,14 +157,14 @@ manifest. Python reads this file without installing R. The [provenance note](dat
 identifies the original course and the substantially modified, semi-synthetic
 adaptation. Other frozen inputs retain their source notes and conditions.
 
-The author has chosen to include limited iShares and NGFS extracts. NGFS extracts
-carry the required notices. Written iShares redistribution permission remains
-unconfirmed; inclusion does not grant unrestricted reuse rights. See
-[data terms](DATA_TERMS.md) and the [release audit](PUBLICATION_AUDIT.md).
+The repository includes limited iShares and NGFS extracts with their source
+notices. Their conditions of use are described in [data terms](DATA_TERMS.md);
+inclusion does not grant unrestricted reuse rights.
 
 The *Instructor's Manual* is available through the publisher's password-protected
 Instructor Hub, reserved for instructors. It uses the **R companion** and a separately distributed,
-restricted package of exercise-specific R scripts. Those scripts reuse the
+restricted package of exercise-specific R scripts, `instructor-code.zip`,
+downloaded alongside the manual from Instructor Hub. Those scripts reuse the
 book's inputs and shared R functions. This Python companion provides adaptations
 of the book applications; it does not execute the instructor solutions.
 

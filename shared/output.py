@@ -29,7 +29,13 @@ def setup(chapter):
 
 
 def show_table(out, number, frame):
+    with (out.parents[1] / 'results-index.csv').open(encoding='utf-8-sig', newline='') as handle:
+        matches = [row for row in csv.DictReader(handle)
+                   if row['kind'] == 'Table' and row['number'] == number]
+    if len(matches) != 1:
+        raise ValueError(f'Expected one indexed title for Table {number}.')
     frame.to_csv(out / 'tables' / f'table-{number.replace(".", "-")}.csv', index=False)
+    display(Markdown(f"**Table {number}. {matches[0]['title']}**"))
     display(Markdown(frame.to_markdown(index=False)))
 
 

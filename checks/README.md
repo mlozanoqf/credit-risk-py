@@ -10,7 +10,8 @@ references. Unit tests run with `.venv\Scripts\python.exe -m unittest discover -
 
 `book-results.csv` records the 211 numbered results checked against book revision
 `d7a08d03801b73d9801b14eaffe095563c0e47a0`, with caption-only updates
-checked against the local publication manuscript on 16 October 2026. Numbering
+checked against the compiled publication manuscript on 20 October 2026, including
+14 table captions with unit clarifications. Numbering
 and result identifiers are unchanged. Companion captions can describe
 language-specific results, such as the selected Python applicant. Update the index
 and this reference together after checking any later changes in book numbering.
