@@ -5,31 +5,30 @@
 The complete frozen scoring RDS and reference split are included, with a
 [provenance note](data/credit-scoring/PROVENANCE.md).
 
-Scope approved on 14 October 2026: Foundations and all six chapters, in a
-separate local project, before public release. Reference: credit-risk-r commit
-24a5616326e2f6759c0e793c7d0f5ec1728dc99b. The R project remains unchanged.
+Foundations and all six chapters are implemented. The initial comparison,
+begun on 14 October 2026, used R companion commit
+24a5616326e2f6759c0e793c7d0f5ec1728dc99b. Subsequent checks are documented
+below and in the linked validation reports.
 
-| Unit | Status | Next check |
+| Unit | Status | Validation notes |
 |---|---|---|
-| Foundations | Implemented; validated | Author review of Python report |
-| 1. Logistic credit scoring | Implemented; validated | Author review; complete inputs in private checkout |
-| 2. Tree-based credit scoring | Implemented; validated adaptation | Author review of the material tree differences and XGBoost comparison |
-| 3. Merton | Implemented; pilot validated | Author review of rendered report; see VALIDATION.md |
-| 4. Credit Spreads and CDS Valuation | Implemented; validated | Author review of report and relative-value comparison |
-| 5. Portfolio Credit Risk with Copulas | Implemented; validated | Author review of Monte Carlo differences and uncertainty |
-| 6. Climate Credit Risk | Implemented; validated | Author review; optional live download has not been refreshed |
+| Foundations | Implemented; validated | Worked calculations and both unnumbered figures checked |
+| 1. Logistic credit scoring | Implemented; validated | Complete frozen input and reference split included |
+| 2. Tree-based credit scoring | Implemented; validated adaptation | CART tree differences and XGBoost comparisons documented |
+| 3. Merton | Implemented; validated | Numerical and financial checks; see VALIDATION.md |
+| 4. Credit Spreads and CDS Valuation | Implemented; validated | Valuations and relative-value comparisons checked |
+| 5. Portfolio Credit Risk with Copulas | Implemented; validated | Monte Carlo differences assessed with sampling uncertainty |
+| 6. Climate Credit Risk | Implemented; validated | Frozen inputs checked; optional live download not refreshed |
 
-## Order and acceptance criteria
+## Implementation and validation history
 
-Complete the Merton pilot first, including a rendered report, per-result code
-links, fixed dependencies, financial identities, comparison with R and a fresh
-process repeat. Then extend the same pattern to Foundations, Chapters 1-2,
-Chapter 4, Chapter 5 and Chapter 6. This file records progress, not a claim that
-planned units already work.
+The Merton pilot established the chapter format, per-result code links, fixed
+dependencies, financial identities, comparison with R and a fresh-process
+repeat. The same approach was then applied to the other chapters.
 
 Foundations and Chapters 1-2 were completed next. See SCORING_VALIDATION.md
 for the comparison, including 16 versus 5 leaves in the Python/R simple trees.
-The user explicitly approved the scikit-learn CART adaptation. Both scoring
+The simple tree uses the documented scikit-learn CART adaptation. Both scoring
 chapters retain the exact R split membership and order in the supplied
 manifest, and run without an R runtime. Chapters 4-6 were subsequently completed
 with 90 additional numbered results, financial tests and R comparisons. See
@@ -40,15 +39,16 @@ See PUBLICATION_AUDIT.md for technical checks and data-source conditions.
 NGFS notices are retained and the iShares extract is included. Written iShares
 redistribution permission remains unconfirmed.
 
-Use identical frozen inputs and financial assumptions. For Chapters 1-2, retain
-the same reference training/test memberships to distinguish language differences
-from sample changes. Generated predictions and model objects remain local. Ask before substituting methods.
+## Interpreting comparisons
 
-Deterministic discrepancies require diagnosis rather than a blanket disclaimer.
-Monte Carlo checks use uncertainty and financial identities; no requirement that
-random paths or every small-sample ranking match R. Document model/algorithm
-differences in the relevant QMD. Linux/macOS clean-install validation
-remains a separate later step.
+The comparisons use identical frozen inputs and financial assumptions. For
+Chapters 1-2, the common training/test memberships separate implementation
+differences from sample changes. Generated predictions and model objects stay
+on the reader's computer. Deterministic calculations are checked against R;
+Monte Carlo comparisons use sampling uncertainty and financial identities
+because random paths and small-sample rankings can differ. Chapter QMDs explain
+model and algorithm differences. Linux/macOS clean-install validation is
+outside the completed checks.
 
 ## References for implementation choices
 

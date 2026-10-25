@@ -66,8 +66,8 @@ Maintainer-only R comparison inputs and diagnostics are kept in .local/.
 The scripts in checks/ document their extraction and comparison. R is not
 required to execute the Python chapter.
 
-## Release status
+## Distribution
 
-The companion is maintained in a private GitHub repository until publication.
+The public companion repository is https://github.com/mlozanoqf/credit-risk-py.
 Local diagnostics, the virtual environment and generated outputs are ignored
 by Git. See PUBLICATION_AUDIT.md for the scope of completed validation.
