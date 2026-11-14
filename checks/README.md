@@ -8,11 +8,12 @@ Run each of the seven chapters with `.venv\Scripts\python.exe run.py <chapter-id
 index titles, source links, generated figures/tables, source freshness and numerical
 references. Unit tests run with `.venv\Scripts\python.exe -m unittest discover -s checks -p "test_*.py"`.
 
-`book-results.csv` records the 211 numbered results checked against book revision
+`book-results.csv` records the 213 numbered results. The original 211 were checked against book revision
 `d7a08d03801b73d9801b14eaffe095563c0e47a0`, with caption-only updates
 checked against the compiled publication manuscript on 20 October 2026, including
-14 table captions with unit clarifications. Numbering
-and result identifiers are unchanged. Companion captions can describe
+14 table captions with unit clarifications. Figures 0.1 and 0.2 were added on
+13 November 2026 to match the publisher's Foundations numbering request;
+numbering and identifiers in Chapters 1-6 are unchanged. Companion captions can describe
 language-specific results, such as the selected Python applicant. Update the index
 and this reference together after checking any later changes in book numbering.
 

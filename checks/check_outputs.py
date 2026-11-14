@@ -80,9 +80,6 @@ def main():
         assert '[Report]' not in readme and '[Output]' not in readme
         assert len(re.findall(r'\[Code\]\(',readme)) == len(selected)
         figures = [ROOT/r['output'] for r in selected if r['kind']=='Figure']
-        if chapter['id']=='00-foundations':
-            figures = [folder/'figures'/f'figure-foundations-{name}.png' for name in ['loss','normal']]
-            assert all(p.is_file() for p in figures)
         review = ROOT/'.local'/f"{chapter['id']}-visual-review"
         review.mkdir(parents=True,exist_ok=True)
         for start in range(0,len(figures),4):

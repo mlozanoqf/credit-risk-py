@@ -118,7 +118,10 @@ values.update(loss_in_default=loss_in_default,expected_loss=expected_loss,
 Both portfolios have the same expected loss. Dependence changes how often
 their losses arrive together, which affects dispersion and the loss quantile.
 
+### Figure 0.1 {#result-figure-0-1}
+
 ```{python}
+#| fig-cap: "Figure 0.1. Two-loan loss distributions under independent and simultaneous defaults."
 loss_values = np.array([0,5000,10000])
 prob_independent = np.array([.81,.18,.01])
 prob_together = np.array([.90,0,.10])
@@ -133,7 +136,7 @@ for ax,title,p in zip(axes,['Independent','Always together'],[prob_independent,p
     for j,v in enumerate(p): ax.text(j,v+.025,f'{v:.0%}',ha='center')
 axes[0].set_ylabel('Probability')
 fig.tight_layout()
-show_figure(out,'foundations-loss',fig)
+show_figure(out,'0.1',fig)
 mean_independent = np.sum(loss_values*prob_independent)
 mean_together = np.sum(loss_values*prob_together)
 sd_independent = np.sqrt(np.sum(prob_independent*(loss_values-mean_independent)**2))
@@ -189,7 +192,10 @@ values.update(simulated_mean_loss=simulation_check['Simulated mean loss ($)'].to
 
 ## Scores, logarithms and probabilities
 
+### Figure 0.2 {#result-figure-0-2}
+
 ```{python}
+#| fig-cap: "Figure 0.2. Standard normal threshold for an 8% default probability."
 normal_pd = .08
 normal_threshold = norm.ppf(normal_pd)
 normal_check = norm.cdf(normal_threshold)
@@ -202,7 +208,7 @@ ax.fill_between(tail,norm.pdf(tail),color=RED,alpha=.65)
 ax.axvline(normal_threshold,color=RED,ls=':',lw=.8)
 ax.text(-2.6,.25,'Left-tail probability\n8%',ha='center')
 ax.set(xlabel='Standardized score',ylabel='Density',ylim=(0,.44))
-show_figure(out,'foundations-normal',fig)
+show_figure(out,'0.2',fig)
 probability = .08
 odds = probability/(1-probability)
 score = np.log(odds)

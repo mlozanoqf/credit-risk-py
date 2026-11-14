@@ -1,4 +1,6 @@
 kind,number,book_id,companion_title
+Figure,0.1,fig-foundations-loss,Two-loan loss distributions under independent and simultaneous defaults.
+Figure,0.2,fig-foundations-normal,Standard normal threshold for an 8% default probability.
 Table,1.1,tbl-variable-names-used-in-the-chapter,Variable names used in the chapter.
 Table,1.2,tbl-first-10-loan-records-before-cleaning,First 10 loan records before cleaning.
 Table,1.3,tbl-loan-counts-by-home-ownership,Loan counts by home ownership.

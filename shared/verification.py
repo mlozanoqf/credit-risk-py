@@ -33,8 +33,6 @@ def required_outputs(root, chapter):
         rows = list(csv.DictReader(handle))
     paths = [root/r['output'] for r in rows if r['chapter']==chapter]
     paths += [out/'numeric-results.json',out/'chapter.html']
-    if chapter == '00-foundations':
-        paths += [out/'figures'/f'figure-foundations-{name}.png' for name in ('loss','normal')]
     return paths
 
 

@@ -14,5 +14,10 @@ If it stays closed, open that file manually from the extracted project folder.
 Open [chapter.qmd](chapter.qmd) to read or edit the calculations.
 Execute in source order. [Results](../../README.md#output-and-comparison-with-r) are created locally.
 
-Foundations uses unnumbered worked calculations. Follow them in `chapter.qmd`
-from the beginning.
+Follow the worked calculations in `chapter.qmd` from the beginning. The figure
+numbers below match the book's unnumbered Foundations chapter.
+
+| Result | Title | Code |
+|---|---|---|
+| Figure 0.1 | Two-loan loss distributions under independent and simultaneous defaults. | [Code](chapter.qmd#L123) |
+| Figure 0.2 | Standard normal threshold for an 8% default probability. | [Code](chapter.qmd#L197) |

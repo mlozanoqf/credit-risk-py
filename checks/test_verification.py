@@ -137,24 +137,28 @@ class OutputFreshnessTests(unittest.TestCase):
             complete_run(self.root, 'example', self.started, self.before)
         self.assertFalse(self.manifest.exists())
 
-    def test_foundations_requires_fresh_unnumbered_figures(self):
+    def test_foundations_requires_fresh_numbered_figures(self):
+        with (self.root/'results-index.csv').open('a') as stream:
+            stream.write('00-foundations,output/00-foundations/figures/figure-0-1.png\n'
+                         '00-foundations,output/00-foundations/figures/figure-0-2.png\n')
+        before = source_hashes(self.root)
         paths = required_outputs(self.root, '00-foundations')
         self.assertEqual(len(paths), 4)
-        for path in paths[:2]:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b'fresh output')
-        with self.assertRaisesRegex(RuntimeError, 'figure-foundations-loss'):
-            complete_run(self.root, '00-foundations', self.started, self.before)
         for path in paths[2:]:
             path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b'fresh output')
+        with self.assertRaisesRegex(RuntimeError, 'figure-0-1'):
+            complete_run(self.root, '00-foundations', self.started, before)
+        for path in paths[:2]:
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b'figure')
-        os.utime(paths[-1], (self.started-60, self.started-60))
-        with self.assertRaisesRegex(RuntimeError, 'figure-foundations-normal'):
-            complete_run(self.root, '00-foundations', self.started, self.before)
-        os.utime(paths[-1], None)
-        self.assertEqual(complete_run(self.root, '00-foundations', self.started, self.before), 4)
+        os.utime(paths[1], (self.started-60, self.started-60))
+        with self.assertRaisesRegex(RuntimeError, 'figure-0-2'):
+            complete_run(self.root, '00-foundations', self.started, before)
+        os.utime(paths[1], None)
+        self.assertEqual(complete_run(self.root, '00-foundations', self.started, before), 4)
         check_freshness(self.root, '00-foundations')
-        paths[-1].write_bytes(b'changed figure')
+        paths[1].write_bytes(b'changed figure')
         with self.assertRaisesRegex(ValueError, 'output changed or missing'):
             check_freshness(self.root, '00-foundations')
 
